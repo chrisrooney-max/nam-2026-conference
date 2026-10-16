@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { API, visit, failOnPageErrors, waitForResults, ATTENDEES } from './helpers.js';
+import { API, visit, failOnPageErrors, waitForResults, ATTENDEES, momentOn, shotForPR } from './helpers.js';
 
 /**
  * Smoke suite: every route renders, with no console errors and no horizontal
@@ -120,4 +120,20 @@ test.describe('Nothing claims to be true when it is not', () => {
     await visit(page, '/');
     await expect(page.getByRole('contentinfo')).toContainText(bootstrap.conference.dates);
   });
+});
+
+test('the closed attendee switcher reads as demo-only, not as an account menu', async ({ page }) => {
+  await visit(page, '/', { at: await momentOn(0, '10:30') });
+  const switcher = page.getByRole('button', { name: /Switch attendee/ });
+  await expect(switcher).toBeVisible();
+
+  // The cues are visible text — today "Viewing as" is only the aria-label.
+  await expect(switcher.getByText('Viewing as', { exact: true })).toBeVisible();
+  await expect(switcher.getByText('Demo', { exact: true })).toBeVisible();
+
+  // A dashed border sets it apart from the solid-bordered nav, on both projects.
+  const borderStyle = await switcher.evaluate((el) => getComputedStyle(el).borderTopStyle);
+  expect(borderStyle).toBe('dashed');
+
+  await shotForPR(page, 'Closed attendee switcher marked as demo-only');
 });
