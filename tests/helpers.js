@@ -44,13 +44,26 @@ export async function momentOn(dayIndex, time) {
 export const MID_SESSION_TIME = '10:30';   // inside the 10:15 slot
 export const BETWEEN_SLOTS_TIME = '11:10'; // the gap before 11:30
 
-/** Open a route as a given attendee, optionally with the clock pinned. */
-export async function visit(page, path = '/', { as = ATTENDEES.jonas, at = null } = {}) {
-  await page.addInitScript(({ id, clockAt }) => {
+/**
+ * Open a route as a given attendee, optionally with the clock pinned.
+ *
+ * The theme is pinned too (`orbit:theme`, dark unless told otherwise) so no spec
+ * depends on the machine's OS setting. An init script re-runs on every
+ * navigation, `reload()` included, so the theme is written once per tab — a
+ * sessionStorage flag survives the reload, a new page or context starts clean —
+ * and never overwrites what the page has since stored. `theme: null` writes
+ * nothing: a true first-time visitor.
+ */
+export async function visit(page, path = '/', { as = ATTENDEES.jonas, at = null, theme = 'dark' } = {}) {
+  await page.addInitScript(({ id, clockAt, themeChoice }) => {
     window.localStorage.setItem('orbit:currentUserId', String(id));
     if (clockAt) window.localStorage.setItem('orbit:clockAt', clockAt);
     else window.localStorage.removeItem('orbit:clockAt');
-  }, { id: as, clockAt: at });
+    if (themeChoice && !window.sessionStorage.getItem('orbit:test-theme-seeded')) {
+      window.localStorage.setItem('orbit:theme', themeChoice);
+      window.sessionStorage.setItem('orbit:test-theme-seeded', '1');
+    }
+  }, { id: as, clockAt: at, themeChoice: theme });
   await page.goto(path);
   await expect(page.getByRole('banner')).toBeVisible();
 }
