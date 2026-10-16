@@ -147,9 +147,10 @@ export const LANES = {
   // day index 2 the seats.* lanes above leave alone — rather than a dynamic
   // pick that could otherwise land on one of their sessions.
   'agenda.next-up-done': { desktop: { user: marcus, day: 2, slot: '17:15', clean: true }, mobile: { user: kenji, day: 2, slot: '17:15', clean: true } },
-  // marcus/day 3 desktop and jonas/day 0 mobile are each used by no other lane,
-  // so concurrent tests cannot collide on these attendee+day pairs.
-  'switcher.live-count': { desktop: { user: marcus, day: 3 }, mobile: { user: jonas, day: 0, clean: true } },
+  // jonas/day 1 desktop and jonas/day 0 mobile are each used by no other lane,
+  // so concurrent tests cannot collide on these attendee+day pairs. (Not
+  // marcus/day 3: home.spec.js reads it as the day that must stay empty.)
+  'switcher.live-count': { desktop: { user: jonas, day: 1 }, mobile: { user: jonas, day: 0, clean: true } },
   // Check-ins and ratings only — no seat is booked, so agenda: false lets these
   // share a day with booking lanes (see lanes.test.js). The slot is the one
   // unattendedFor() picks its session from.
