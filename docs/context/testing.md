@@ -83,9 +83,13 @@ instead of silently testing another worktree's app.
 - `conferenceDays()` → the four ISO dates from `/bootstrap`, cached per worker.
 - `momentOn(dayIndex, 'HH:MM')` → `'YYYY-MM-DDTHH:MM'`; `MID_SESSION_TIME = '10:30'`,
   `BETWEEN_SLOTS_TIME = '11:10'`.
-- `visit(page, path = '/', { as = ATTENDEES.jonas, at = null })` — an init script sets
-  `orbit:currentUserId` and sets or **removes** `orbit:clockAt`, then `goto` and waits for
-  the `banner` role.
+- `visit(page, path = '/', { as = ATTENDEES.jonas, at = null, theme = 'dark' })` — an init script sets
+  `orbit:currentUserId`, sets or **removes** `orbit:clockAt`, and pins `orbit:theme`
+  (dark by default, so no spec depends on the OS scheme), then `goto` and waits for
+  the `banner` role. The init script re-runs on `reload()`, so the theme is written
+  once per tab (a `sessionStorage` flag) and never clobbers a choice made in the page;
+  `theme: null` writes nothing — a first-time visitor. Emulate the OS with
+  `page.emulateMedia({ colorScheme })`.
 - `failOnPageErrors(page, errors = [])` → array filled with console errors and page errors.
 - `waitForResults(page, testId = 'result-count')` — waits until that testid stops saying Loading.
 - `clearAgendaFor(request, userId, day)` — releases every seat and waitlist place that

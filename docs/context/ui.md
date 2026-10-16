@@ -6,6 +6,7 @@ files:
   - src/index.css
   - src/lib/accents.js
   - src/lib/format.js
+  - src/lib/theme.js
   - src/lib/useDocumentTitle.js
   - src/lib/useInView.js
   - src/lib/useMediaQuery.js
@@ -23,6 +24,8 @@ files:
   - src/pages/NotFoundPage.jsx
 tests:
   - tests/unit/format.test.js
+  - tests/unit/theme.test.js
+  - tests/theme.spec.js
   - tests/smoke.spec.js
 related: [architecture, speakers, venues, schedule, testing]
 ---
@@ -37,8 +40,23 @@ related: [architecture, speakers, venues, schedule, testing]
 `font-display` (Space Grotesk; `.font-display` also sets weight 700 and tight
 tracking), `font-mono`. `--radius-card`. Custom utilities: `card` (surface +
 hairline border + card radius — the module panel), `glass` (blurred translucent,
-used by the header, toasts, menus), `hide-scrollbar`. Dark only
-(`color-scheme: dark`). In SVG use `var(--color-ground)` etc.
+used by the header, toasts, menus), `hide-scrollbar`. Two token sets: dark is the `@theme` default
+(`color-scheme: dark`); `html[data-theme="light"]` in the same file overrides the
+same tokens (and `glass`, the scrollbar thumb, the top wash) with `color-scheme:
+light`. It also steps the pale accent shades (`violet/emerald/amber/rose…`
+-200/-300/-400) down to their -800/-700/-600, so accent text reads on white. In
+SVG use `var(--color-ground)` etc. — never `rgba(255,255,255,…)`, which vanishes
+on light; `border-ink/20`, `fill-ink` rather than `border-white/20`. `text-white`
+is for text on photos and gradients only, never on a token surface.
+
+**Theme — `src/lib/theme.js`.** The attendee's Light / Dark / System choice is in
+`localStorage['orbit:theme']`; unset or junk is `dark`, the first-visit look.
+`resolveTheme(choice, osPrefersDark)` → `'light' | 'dark'` (pure); `readChoice()`;
+`useTheme()` → `{ choice, resolved, setChoice }` sets `data-theme` on `<html>` and,
+only while the choice is `system`, follows `matchMedia('(prefers-color-scheme:
+dark)')` live. Nothing is written until the attendee chooses. An inline script in
+`index.html` applies `data-theme` before first paint with the same rules, so a
+stored light choice does not flash dark — change both if the rules change.
 
 **Motion utilities** (all in `index.css`, all neutralised by the
 `prefers-reduced-motion` block at the bottom, which also forces `.reveal`
@@ -125,6 +143,9 @@ sticky `glass` header, `<main id="main">`, and the footer.
 - Footer: three `nav` columns (Programme, On site, Conference) built from an
   inline array of `[label, to]`, plus `conference.dates · conference.city` from
   bootstrap and a plain `<a href="/api/bootstrap">`.
+- `ThemeToggle` (header, beside `UserSwitcher`): `role="group"` named "Theme"
+  with icon-only buttons Light / Dark / System (`aria-label`, `aria-pressed`,
+  `data-testid="theme-<choice>"`), icons `sun` / `moon` / `monitor`.
 - `UserSwitcher` sits in the header once `ready`: a `listbox` of
   `useConference().users`, calls `setCurrentUserId`; closes on outside pointer
   or Escape. Each row shows "N on agenda"; every row but the signed-in
