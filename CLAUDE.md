@@ -85,6 +85,9 @@ Four rules borrowed from real conferences; each writes state and gates the next:
    The exception is a clash with a *full* talk: that queues you, and the seat you
    hold is kept as backup until a place opens, so click order never matters.
    Nor can you take a seat in a session that has already ended (also a 409).
+   Nothing releases a seat you have checked in to or that is running: My Agenda
+   is built from `reservations`, so the delete drops an attended talk and its
+   rating prompt. Any new path that frees a seat (promotion, swap, cleanup) checks.
 2. **Check in** → opens 15 minutes before the session starts, closes when it
    ends. You cannot check in to something that has not happened.
 3. **Rate it** → only if you checked in, only once it is over. One rating per
