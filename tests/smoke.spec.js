@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { API, visit, failOnPageErrors, waitForResults, ATTENDEES } from './helpers.js';
+import { API, visit, failOnPageErrors, waitForResults, ATTENDEES, shotForPR } from './helpers.js';
 
 /**
  * Smoke suite: every route renders, with no console errors and no horizontal
@@ -120,4 +120,23 @@ test.describe('Nothing claims to be true when it is not', () => {
     await visit(page, '/');
     await expect(page.getByRole('contentinfo')).toContainText(bootstrap.conference.dates);
   });
+});
+
+test('user switcher dropdown is opaque', async ({ page }) => {
+  // The schedule is the busiest page, so there is plenty to show through.
+  await visit(page, '/schedule');
+  await page.getByRole('button', { name: /Viewing as/ }).click();
+  const listbox = page.getByRole('listbox');
+  await expect(listbox).toBeVisible();
+
+  const surface = await listbox.evaluate((el) => {
+    const s = getComputedStyle(el);
+    return { background: s.backgroundColor, backdrop: s.backdropFilter };
+  });
+  // Fully opaque is `rgb(...)`; any alpha makes it `rgba(...)` and lets the page through.
+  expect(surface.background).toMatch(/^rgb\(/);
+  // A blur over a translucent fill is the glass look this panel must not have.
+  expect(surface.backdrop).toBe('none');
+
+  await shotForPR(page, 'User switcher on an opaque surface');
 });
