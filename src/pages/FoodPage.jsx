@@ -52,8 +52,8 @@ function VendorCard({ vendor, venue, now, featured }) {
           {vendor.emoji}
         </span>
         <div className="absolute right-3 top-3 flex items-center gap-1.5">
-          {featured && <Chip accent="amber" className="!py-0.5 !text-[10px] !bg-black/50 backdrop-blur-sm">Top rated</Chip>}
-          {open && <span className="rounded-full bg-emerald-500/25 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-200 backdrop-blur-sm">Open</span>}
+          {featured && <Chip accent="amber" className="!py-0.5 !text-[10px] !bg-black/55 !text-amber-100 backdrop-blur-sm">Top rated</Chip>}
+          {open && <span className="rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-100 backdrop-blur-sm">Open</span>}
         </div>
       </div>
 

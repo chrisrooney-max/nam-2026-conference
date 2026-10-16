@@ -118,3 +118,19 @@ test('every top-level page renders in light without errors', async ({ page }) =>
   }
   expect(errors).toEqual([]);
 });
+
+test('badges on a food cover keep pale text on a dark pill in light', async ({ page }) => {
+  // The cover is a bright gradient in both themes, so a badge on it cannot use
+  // the themed accent text, which turns dark in light.
+  await visit(page, '/food', { theme: 'light' });
+  const badge = page.getByText('Top rated').first();
+  await expect(badge).toBeVisible();
+  // Computed colour may come back as oklch(), so let a canvas turn it into RGB.
+  const [r, g, b] = await badge.evaluate((el) => {
+    const ctx = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+    ctx.fillStyle = getComputedStyle(el).color;
+    ctx.fillRect(0, 0, 1, 1);
+    return [...ctx.getImageData(0, 0, 1, 1).data].slice(0, 3);
+  });
+  expect((0.2126 * r + 0.7152 * g + 0.0722 * b) / 255).toBeGreaterThan(0.8);
+});
