@@ -118,6 +118,10 @@ export const LANES = {
   // attendee and day (a real seat lane, so it never sets its own slot
   // otherwise) — this test's own pick is dynamic and ignores them.
   'seats.queue':      { desktop: { user: marcus, day: 0, slot: '13:30' }, mobile: { user: priya, day: 0, slot: '10:15' } },
+  // Books an open talk, then queues for a sold-out one in a clashing slot. Each
+  // pane pins the sold-out slot it queues in, distinct from the other panes on
+  // its attendee and day; neither is Jonas, since it queues.
+  'seats.backup':     { desktop: { user: marcus, day: 0, slot: '17:15' }, mobile: { user: priya, day: 0, slot: '13:30' } },
   'conflict.ui':      { desktop: { user: kenji, day: 3, clean: true },    mobile: { user: amara, day: 3, clean: true } },
   'conflict.api':     { desktop: { user: priya, day: 3 },                 mobile: { user: jonas, day: 3 } },
   'schedule.grid':    { desktop: { user: sofia, day: 1 },                 mobile: { user: marcus, day: 1 } },

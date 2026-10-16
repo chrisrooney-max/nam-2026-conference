@@ -232,4 +232,34 @@ test.describe('Waitlists', () => {
     await page.getByTestId('release-seat').click();
     await expect(page.getByTestId('reserve-seat')).toBeVisible();
   });
+
+  test('queueing behind a held seat tells you the seat is kept as backup', async ({ page, request }, testInfo) => {
+    const lane = await laneFor('seats.backup', testInfo);
+    const sessions = await bookableFor(request, lane.user, lane.day);
+    const wanted = sessions.find((s) => s.isFull && s.startsAt === lane.slot);
+    expect(wanted, `no sold-out session at ${lane.slot}`).toBeTruthy();
+    const backup = sessions.find((s) => !s.isFull && s.seatsLeft > 3 && s.id !== wanted.id
+      && s.startsAt < wanted.endsAt && wanted.startsAt < s.endsAt);
+    expect(backup, 'no open session clashing with the sold-out one').toBeTruthy();
+    const url = (id) => `${API}/users/${lane.user}/reservations/${id}`;
+
+    expect((await (await request.put(url(backup.id))).json()).status).toBe('confirmed');
+    try {
+      await visit(page, `/sessions/${wanted.id}`, { as: lane.user, at: await momentOn(0, '07:00') });
+      await ensureNotReserved(page);
+      await page.getByTestId('reserve-seat').click();
+
+      // a queue place, not a conflict dialog — and the toast says which seat is kept
+      await expect(page.getByTestId('reservation-waitlisted')).toBeVisible();
+      await expect(page.getByTestId('conflict-dialog')).toHaveCount(0);
+      const toaster = page.getByTestId('toaster');
+      await expect(toaster).toContainText(/waitlist/i);
+      await expect(toaster).toContainText(backup.title);
+      await expect(toaster).toContainText(/until a place opens/i);
+      await shotForPR(page, 'Queued behind a held seat, which is kept as backup');
+    } finally {
+      await request.delete(url(wanted.id));
+      await request.delete(url(backup.id));
+    }
+  });
 });

@@ -25,8 +25,8 @@ describe('A day on the schedule', () => {
     const sessions = await api.json('/sessions');
     const seat = sessions.find((s) => !s.isFull && s.seatsLeft > 2 && !s.isKeynote);
     assert.ok(seat, 'the seed should leave a session with seats to spare');
-    // Not overlapping the seat: the clash guard runs before the room is found
-    // full, so an overlapping sold-out session would be refused, not queued.
+    // Not overlapping the seat: this case is about the two totals. A sold-out
+    // talk that does overlap is queued behind the seat as a backup — see below.
     const queue = sessions.find((s) => s.isFull && s.day === seat.day && !overlaps(s, seat));
     assert.ok(queue, 'the seed should sell out a session on that same day');
 
@@ -45,6 +45,26 @@ describe('A day on the schedule', () => {
     const held = new Map(day.sessions.map((s) => [s.id, s.reservation]));
     assert.equal(held.get(seat.id), 'confirmed');
     assert.equal(held.get(queue.id), 'waitlisted');
+  });
+});
+
+describe('A waitlist place over a held backup seat', () => {
+  test('adds to waitlistedMinutes, not totalMinutes', async () => {
+    const user = 6;
+    await clearAgenda(api, user);
+    const sessions = await api.json('/sessions');
+    const queue = sessions.find((s) => s.isFull && sessions.some((o) => !o.isFull && o.seatsLeft > 2 && overlaps(o, s)));
+    const seat = sessions.find((s) => !s.isFull && s.seatsLeft > 2 && overlaps(s, queue));
+    assert.ok(queue && seat, 'the seed should sell out a session opposite one with room');
+
+    assert.equal((await api.put(`/users/${user}/reservations/${seat.id}`, {})).body.status, 'confirmed');
+    const queued = await api.put(`/users/${user}/reservations/${queue.id}`, {});
+    assert.equal(queued.body.status, 'waitlisted', 'the clashing full talk queues behind the backup');
+
+    const { days } = await api.json(`/users/${user}/schedule`);
+    const day = days.find((d) => d.date === seat.day);
+    assert.equal(day.totalMinutes, seat.durationMins, 'only the seat you hold counts as booked');
+    assert.equal(day.waitlistedMinutes, queue.durationMins);
   });
 });
 

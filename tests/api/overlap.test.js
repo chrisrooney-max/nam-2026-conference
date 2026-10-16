@@ -95,6 +95,36 @@ describe('Two seats in one slot', () => {
   });
 });
 
+describe('A clash is a choice only while the wanted talk has room', () => {
+  test('a talk with room that clashes with a held seat is still a 409, never a queue place', async () => {
+    const user = 3;
+    await clearAgenda(api, user);
+    const { held, wanted } = await collidingPair();
+    assert.equal(wanted.isFull, false, 'the wanted talk has room');
+
+    await api.put(`/users/${user}/reservations/${held.id}`);
+    const res = await api.put(`/users/${user}/reservations/${wanted.id}`);
+    assert.equal(res.status, 409);
+    assert.equal(res.body.rejected, 'overlap');
+    assert.equal(res.body.conflictsWith.id, held.id);
+    assert.equal(res.body.backup, undefined, 'there is nothing to keep as a backup when you can simply swap');
+  });
+
+  test('a full talk that is already over answers ended, not a place in its queue', async () => {
+    const user = 4;
+    await clearAgenda(api, user);
+    const sessions = await api.json('/sessions');
+    const full = sessions.find((s) => s.isFull && sessions.some((o) => !o.isFull && o.seatsLeft > 2 && overlaps(o, s)));
+    const held = sessions.find((s) => !s.isFull && s.seatsLeft > 2 && overlaps(s, full));
+    assert.equal((await api.put(`/users/${user}/reservations/${held.id}`)).body.status, 'confirmed');
+
+    const res = await api.put(`/users/${user}/reservations/${full.id}`, { day: full.day, time: full.endsAt });
+    assert.equal(res.status, 409);
+    assert.equal(res.body.rejected, 'ended', 'the ended guard runs before any clash is weighed');
+    assert.equal(res.body.status, null);
+  });
+});
+
 /**
  * A session in the exact same slot as `held`, but on a different day, with
  * seats to spare — every seeded day repeats the same slot grid, so this
