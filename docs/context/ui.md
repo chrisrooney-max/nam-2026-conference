@@ -37,7 +37,7 @@ related: [architecture, speakers, venues, schedule, testing]
 `font-display` (Space Grotesk; `.font-display` also sets weight 700 and tight
 tracking), `font-mono`. `--radius-card`. Custom utilities: `card` (surface +
 hairline border + card radius — the module panel), `glass` (blurred translucent,
-used by the header, toasts, menus), `hide-scrollbar`. Dark only
+used by the header, toasts, the conflict dialog), `hide-scrollbar`. Dark only
 (`color-scheme: dark`). In SVG use `var(--color-ground)` etc.
 
 **Motion utilities** (all in `index.css`, all neutralised by the
@@ -126,7 +126,7 @@ sticky `glass` header, `<main id="main">`, and the footer.
   inline array of `[label, to]`, plus `conference.dates · conference.city` from
   bootstrap and a plain `<a href="/api/bootstrap">`.
 - `UserSwitcher` sits in the header once `ready`: a `listbox` of
-  `useConference().users`, calls `setCurrentUserId`; closes on outside pointer
+  `useConference().users`, on a solid `bg-overlay` surface (not `glass`, so busy pages never show through), calls `setCurrentUserId`; closes on outside pointer
   or Escape. Each row shows "N on agenda"; every row but the signed-in
   attendee's reads `u.reservedCount` from `/bootstrap` (frozen at load), but
   the active row counts `'confirmed'` entries in `useConference().reservations`
