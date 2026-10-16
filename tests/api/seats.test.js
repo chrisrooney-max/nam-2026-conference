@@ -1,6 +1,6 @@
 import { after, before, describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { clearAgenda, overlaps, startApi } from './harness.js';
+import { clearAgenda, overlaps, shiftTime, startApi } from './harness.js';
 
 /**
  * Seat inventory, at the API.
@@ -155,30 +155,221 @@ describe('Waitlists', () => {
     // the seat moved sideways rather than appearing: the room is still full
     assert.equal(released.body.isFull, true);
   });
+});
 
-  test('promotion skips a waiter who has since taken a clashing seat', async () => {
-    // Kenji queues first but then books something in the same slot; the queue
-    // has to step over him, or he would be handed a seat he cannot sit in.
-    const [clashing, next] = [3, 5];
-    await clearAgenda(api, clashing);
-    await clearAgenda(api, next);
+/** Every confirmed seat an attendee holds, as `[startsAt, endsAt, day]`, from the schedule payload. */
+async function confirmedSlots(user) {
+  const { days } = await api.json(`/users/${user}/schedule`);
+  return days.flatMap((d) => d.sessions.filter((s) => s.reservation === 'confirmed'));
+}
 
-    const fixture = await promotionFixture(used);
-    assert.ok(fixture, 'the seed should leave a second sold-out session with a real holder');
-    used.add(fixture.session.id);
-    await emptyTheQueue(fixture.session.id);
+/** No two confirmed seats of one attendee overlap — the rule the whole feature protects. */
+async function assertOneSeatPerSlot(user) {
+  const held = await confirmedSlots(user);
+  for (const a of held) {
+    for (const b of held) {
+      if (a.id < b.id) assert.ok(!overlaps(a, b), `attendee ${user} holds two seats in one slot: ${a.title} and ${b.title}`);
+    }
+  }
+}
 
-    assert.equal((await api.put(`/users/${clashing}/reservations/${fixture.session.id}`)).body.status, 'waitlisted');
-    // a waitlist place is not a seat, so this is allowed — and is what sets the trap
-    const elsewhere = await api.put(`/users/${clashing}/reservations/${fixture.clashing.id}`);
-    assert.equal(elsewhere.body.status, 'confirmed');
-    assert.equal((await api.put(`/users/${next}/reservations/${fixture.session.id}`)).body.status, 'waitlisted');
+/**
+ * A sold-out session B that `holder` has a real seat in, with a clashing session
+ * A that is nearly full: at most four seats once the pool — everyone but the
+ * holder and anyone else sitting in B — is off it, so a test can fill it with
+ * the attendees it has. The seed guarantees one.
+ */
+async function cascadeFixture(skip) {
+  const sessions = await api.json('/sessions');
+  const people = await Promise.all(ATTENDEES.map((id) => api.json(`/users/${id}`)));
+  const status = (p, sessionId) => p.reservations.find((r) => r.sessionId === sessionId)?.status ?? null;
+  for (const b of sessions.filter((s) => s.isFull && !skip.has(s.id))) {
+    const holder = people.find((p) => status(p, b.id) === 'confirmed');
+    if (!holder) continue;
+    const pool = people.filter((p) => p.id !== holder.id && status(p, b.id) !== 'confirmed');
+    for (const a of sessions.filter((s) => !s.isFull && s.id !== b.id && overlaps(s, b))) {
+      const left = a.seatsLeft + pool.filter((p) => status(p, a.id) === 'confirmed').length;
+      if (left <= 4 && pool.length >= left + 1) return { b, a, holder: holder.id, pool: pool.map((p) => p.id) };
+    }
+  }
+  return null;
+}
 
-    const released = await api.del(`/users/${fixture.holder}/reservations/${fixture.session.id}`);
-    assert.equal(released.body.promoted, next, 'the longest waiter was busy — the seat goes to the next one');
-    assert.equal((await api.get(`/users/${next}/reservations/${fixture.session.id}`)).body.status, 'confirmed');
-    assert.equal((await api.get(`/users/${clashing}/reservations/${fixture.session.id}`)).body.status, 'waitlisted');
-    // and nobody ends up holding two seats in the same slot
-    assert.equal((await api.get(`/users/${clashing}/reservations/${fixture.clashing.id}`)).body.status, 'confirmed');
+/** A full session B and a clashing one with room, for one attendee to want both. */
+async function clashingFullAndOpen() {
+  const sessions = await api.json('/sessions');
+  for (const full of sessions.filter((s) => s.isFull)) {
+    const open = sessions.find((s) => !s.isFull && s.seatsLeft > 2 && overlaps(s, full));
+    if (open) return { full, open };
+  }
+  return null;
+}
+
+/**
+ * W queues on a full B while holding a clashing A; X queues behind with no
+ * clash. `reuse` is the previous test's fixture: its promoted waiter now holds
+ * B, so a second scenario can run on the same sold-out room.
+ */
+async function backupFixture(waiter, next, reuse) {
+  await clearAgenda(api, waiter);
+  await clearAgenda(api, next);
+  let fixture = reuse;
+  if (!fixture) {
+    const found = await promotionFixture(used);
+    assert.ok(found, 'the seed should leave a sold-out session with a real holder and a clashing open one');
+    used.add(found.session.id);
+    fixture = { a: found.clashing, b: found.session, holder: found.holder };
+  }
+  const { a, b, holder } = fixture;
+  await emptyTheQueue(b.id);
+  assert.equal((await api.put(`/users/${waiter}/reservations/${a.id}`)).body.status, 'confirmed');
+  const queued = await api.put(`/users/${waiter}/reservations/${b.id}`);
+  assert.equal(queued.status, 200, 'a full talk over a held backup queues the waiter');
+  assert.equal(queued.body.status, 'waitlisted');
+  assert.equal((await api.put(`/users/${next}/reservations/${b.id}`)).body.status, 'waitlisted');
+  return { a, b, holder };
+}
+
+let afterClockCase; // the sold-out room the next case reuses, now held by its promoted waiter
+
+describe('Waitlists and clashing seats', () => {
+  test('both click orders end with the seat confirmed and the preferred talk waitlisted', async () => {
+    const user = 2; // not 1: clearing a seat holder would unfill the rooms the fixtures below need
+    await clearAgenda(api, user);
+    const { full, open } = await clashingFullAndOpen(); // counts as they stand with the plan cleared
+    assert.ok(full, 'the seed should offer a sold-out session with a clashing open one');
+    const waiting = (await api.json(`/sessions/${full.id}`)).seats.waitlistCount;
+    const seat = `/users/${user}/reservations/${open.id}`;
+    const queue = `/users/${user}/reservations/${full.id}`;
+
+    // book the backup, then queue for the talk you want
+    assert.equal((await api.put(seat)).body.status, 'confirmed');
+    const bookThenQueue = await api.put(queue);
+    assert.equal(bookThenQueue.status, 200, 'queueing behind a held backup is not a clash');
+    assert.equal(bookThenQueue.body.status, 'waitlisted');
+    assert.equal(bookThenQueue.body.backup.id, open.id, 'the response names the seat that is kept');
+    const first = {
+      open: (await api.get(seat)).body, full: (await api.get(queue)).body,
+    };
+
+    // queue first, then book — the other way round
+    await clearAgenda(api, user);
+    assert.equal((await api.put(queue)).body.status, 'waitlisted');
+    const queueThenBook = await api.put(seat);
+    assert.equal(queueThenBook.status, 200);
+    assert.equal(queueThenBook.body.status, 'confirmed');
+    const second = {
+      open: (await api.get(seat)).body, full: (await api.get(queue)).body,
+    };
+
+    for (const end of [first, second]) {
+      assert.equal(end.open.status, 'confirmed');
+      assert.equal(end.full.status, 'waitlisted');
+      assert.equal(end.full.waitlistPosition, waiting + 1);
+      assert.equal(end.open.seatsTaken, open.seatsTaken + 1);
+      assert.equal(end.full.seatsTaken, full.seatsTaken);
+    }
+    assert.deepEqual(first, second, 'the order of the clicks leaves no trace');
+    await assertOneSeatPerSlot(user);
+  });
+
+  test('promotion into the preferred talk frees the backup seat and promotes its queue', async () => {
+    const fixture = await cascadeFixture(used);
+    assert.ok(fixture, 'the seed should leave a sold-out session over a nearly full one');
+    used.add(fixture.b.id);
+    const { a, b, holder, pool } = fixture;
+    const [w, v, ...fillers] = pool;
+    for (const id of [w, v, ...fillers]) await clearAgenda(api, id);
+
+    // A has L seats left: the fillers take all but one, W takes the last, V queues behind them
+    const left = (await api.json(`/sessions/${a.id}`)).seats.seatsLeft;
+    assert.ok(left >= 1 && left - 1 <= fillers.length, `A has ${left} seats left`);
+    for (const id of fillers.slice(0, left - 1)) {
+      assert.equal((await api.put(`/users/${id}/reservations/${a.id}`)).body.status, 'confirmed');
+    }
+    assert.equal((await api.put(`/users/${w}/reservations/${a.id}`)).body.status, 'confirmed');
+    assert.equal((await api.put(`/users/${v}/reservations/${a.id}`)).body.status, 'waitlisted');
+    assert.equal((await api.put(`/users/${w}/reservations/${b.id}`)).body.status, 'waitlisted');
+    const full = { a: (await api.json(`/sessions/${a.id}`)).seats.seatsTaken, b: (await api.json(`/sessions/${b.id}`)).seats.seatsTaken };
+
+    const released = await api.del(`/users/${holder}/reservations/${b.id}`);
+    assert.equal(released.body.promoted, w, 'the freed seat in the preferred talk goes to the first waiter');
+    assert.equal((await api.get(`/users/${w}/reservations/${b.id}`)).body.status, 'confirmed');
+    assert.equal((await api.get(`/users/${w}/reservations/${a.id}`)).body.status, null, 'the backup is let go');
+    // ...and the seat W let go is handed on by the same rule
+    assert.equal((await api.get(`/users/${v}/reservations/${a.id}`)).body.status, 'confirmed');
+    // seats moved sideways: both rooms are as full as they were
+    assert.equal((await api.json(`/sessions/${a.id}`)).seats.seatsTaken, full.a);
+    assert.equal((await api.json(`/sessions/${b.id}`)).seats.seatsTaken, full.b);
+    for (const id of [w, v, holder]) await assertOneSeatPerSlot(id);
+  });
+
+  test('promotion skips a waiter whose backup has started on the clock sent, and promotes the next', async () => {
+    const [waiter, next] = [3, 5];
+    const { a, b, holder } = await backupFixture(waiter, next);
+    afterClockCase = { a, b, holder: next };
+
+    const released = await api.del(`/users/${holder}/reservations/${b.id}?day=${a.day}&time=${a.startsAt}`);
+    assert.equal(released.body.promoted, next, 'the first waiter is already sitting in the backup');
+    assert.equal((await api.get(`/users/${waiter}/reservations/${b.id}`)).body.status, 'waitlisted');
+    assert.equal((await api.get(`/users/${waiter}/reservations/${a.id}`)).body.status, 'confirmed');
+    assert.equal((await api.get(`/users/${next}/reservations/${b.id}`)).body.status, 'confirmed');
+    await assertOneSeatPerSlot(waiter);
+  });
+
+  test('queueing for a full talk over a backup that has started still 409s overlap', async () => {
+    const user = 2;
+    await clearAgenda(api, user);
+    const { full, open } = await clashingFullAndOpen();
+    assert.equal((await api.put(`/users/${user}/reservations/${open.id}`)).body.status, 'confirmed');
+
+    const res = await api.put(`/users/${user}/reservations/${full.id}`, { day: open.day, time: open.startsAt });
+    assert.equal(res.status, 409);
+    assert.equal(res.body.rejected, 'overlap');
+    assert.equal(res.body.conflictsWith.id, open.id);
+    assert.equal(res.body.status, null, 'no waitlist place was written');
+  });
+
+  test('promotion releases a backup that has finished unattended, so a missed talk never blocks the queue', async () => {
+    const [waiter, next] = [4, 6];
+    const { a, b, holder } = await backupFixture(waiter, next, afterClockCase);
+    afterClockCase = { a, b, holder: waiter };
+
+    // the clock sent is after the backup ended: nothing is lost by letting it go
+    const released = await api.del(`/users/${holder}/reservations/${b.id}?day=${a.day}&time=${a.endsAt}`);
+    assert.equal(released.body.promoted, waiter);
+    assert.equal((await api.get(`/users/${waiter}/reservations/${b.id}`)).body.status, 'confirmed');
+    assert.equal((await api.get(`/users/${waiter}/reservations/${a.id}`)).body.status, null);
+    assert.equal((await api.get(`/users/${next}/reservations/${b.id}`)).body.status, 'waitlisted');
+  });
+
+  // These two come last: a check-in cannot be undone, and each outlives its test.
+  test('promotion skips a waiter whose backup is checked in, even on a bare DELETE, and promotes the next', async () => {
+    const [waiter, next] = [3, 5]; // the cases above leave 4 holding B, and 6 is a bystander
+    const { a, b, holder } = await backupFixture(waiter, next, afterClockCase);
+    const checked = await api.put(`/users/${waiter}/checkins/${a.id}`, { day: a.day, time: shiftTime(a.startsAt, 5) });
+    assert.equal(checked.body.checkedIn, true, 'the waiter is in the room');
+
+    const released = await api.del(`/users/${holder}/reservations/${b.id}`);
+    assert.equal(released.body.promoted, next);
+    assert.equal((await api.get(`/users/${waiter}/reservations/${b.id}`)).body.status, 'waitlisted');
+    assert.equal((await api.get(`/users/${waiter}/reservations/${a.id}`)).body.status, 'confirmed');
+    assert.equal((await api.get(`/users/${next}/reservations/${b.id}`)).body.status, 'confirmed');
+  });
+
+  test('queueing for a full talk over a checked-in clash still 409s overlap', async () => {
+    const user = 1;
+    await clearAgenda(api, user);
+    const { full, open } = await clashingFullAndOpen();
+    assert.equal((await api.put(`/users/${user}/reservations/${open.id}`)).body.status, 'confirmed');
+    const checked = await api.put(`/users/${user}/checkins/${open.id}`, { day: open.day, time: shiftTime(open.startsAt, 5) });
+    assert.equal(checked.body.checkedIn, true);
+
+    // no clock sent: the check-in alone is what protects the seat
+    const res = await api.put(`/users/${user}/reservations/${full.id}`);
+    assert.equal(res.status, 409);
+    assert.equal(res.body.rejected, 'overlap');
+    assert.equal(res.body.conflictsWith.id, open.id);
+    assert.equal((await api.get(`/users/${user}/reservations/${full.id}`)).body.status, null);
   });
 });

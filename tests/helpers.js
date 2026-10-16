@@ -118,6 +118,10 @@ export const LANES = {
   // attendee and day (a real seat lane, so it never sets its own slot
   // otherwise) — this test's own pick is dynamic and ignores them.
   'seats.queue':      { desktop: { user: marcus, day: 0, slot: '13:30' }, mobile: { user: priya, day: 0, slot: '10:15' } },
+  // Books an open talk, then queues for a sold-out one in a clashing slot. Each
+  // pane pins the sold-out slot it queues in, distinct from the other panes on
+  // its attendee and day; neither is Jonas, since it queues.
+  'seats.backup':     { desktop: { user: marcus, day: 0, slot: '17:15' }, mobile: { user: priya, day: 0, slot: '13:30' } },
   'conflict.ui':      { desktop: { user: kenji, day: 3, clean: true },    mobile: { user: amara, day: 3, clean: true } },
   'conflict.api':     { desktop: { user: priya, day: 3 },                 mobile: { user: jonas, day: 3 } },
   'schedule.grid':    { desktop: { user: sofia, day: 1 },                 mobile: { user: marcus, day: 1 } },
@@ -134,9 +138,10 @@ export const LANES = {
   // day index 2 the seats.* lanes above leave alone — rather than a dynamic
   // pick that could otherwise land on one of their sessions.
   'agenda.next-up-done': { desktop: { user: marcus, day: 2, slot: '17:15', clean: true }, mobile: { user: kenji, day: 2, slot: '17:15', clean: true } },
-  // marcus/day 3 desktop and jonas/day 0 mobile are each used by no other lane,
-  // so concurrent tests cannot collide on these attendee+day pairs.
-  'switcher.live-count': { desktop: { user: marcus, day: 3 }, mobile: { user: jonas, day: 0, clean: true } },
+  // Marcus's day index 3 is the empty-day fixture home.spec.js reads, so this
+  // lane must not book there — it took 10:15 on his day 0, a slot no other pane
+  // on that pair pins. jonas/day 0 mobile is used by no other lane.
+  'switcher.live-count': { desktop: { user: marcus, day: 0, slot: '10:15' }, mobile: { user: jonas, day: 0, clean: true } },
   // Check-ins and ratings only — no seat is booked, so agenda: false lets these
   // share a day with booking lanes (see lanes.test.js). The slot is the one
   // unattendedFor() picks its session from.

@@ -132,7 +132,9 @@ usersRouter.put('/:id/ratings/:sessionId', (req, res) => {
 });
 
 usersRouter.delete('/:id/reservations/:sessionId', (req, res) => {
-  const state = releaseSeat(Number(req.params.id), Number(req.params.sessionId));
+  // a DELETE has no body, so the clock rides on the query string, as on the attendance GET
+  const state = releaseSeat(Number(req.params.id), Number(req.params.sessionId),
+    { day: req.query.day, time: req.query.time });
   if (!state) return res.status(404).json({ error: 'Session not found' });
   res.json(state);
 });

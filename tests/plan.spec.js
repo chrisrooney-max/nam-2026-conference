@@ -181,7 +181,8 @@ test.describe('My Agenda', () => {
 
   test('the switcher\'s own row updates after booking or releasing a seat, without a reload', async ({ page, request }, testInfo) => {
     const lane = await laneFor('switcher.live-count', testInfo);
-    const target = (await bookableFor(request, lane.user, lane.day)).find((s) => s.seatsLeft > 3);
+    const target = (await bookableFor(request, lane.user, lane.day))
+      .find((s) => s.seatsLeft > 3 && (!lane.slot || s.startsAt === lane.slot));
     expect(target, 'nothing bookable in this lane').toBeTruthy();
 
     // Pin the clock: this lane books on day index 0, the live conference day, so

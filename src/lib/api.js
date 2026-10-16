@@ -46,7 +46,10 @@ export const getToday = (userId, { day, time }) => api(`/users/${userId}/today${
 
 export const reserveSeat = (userId, sessionId, now) =>
   api(`/users/${userId}/reservations/${sessionId}`, { method: 'PUT', body: JSON.stringify(now ?? {}) });
-export const releaseSeat = (userId, sessionId) => api(`/users/${userId}/reservations/${sessionId}`, { method: 'DELETE' });
+// `now` rides on the query string — a DELETE has no body — so the server can tell
+// a backup seat that is running from one that is not before it gives it up.
+export const releaseSeat = (userId, sessionId, now) =>
+  api(`/users/${userId}/reservations/${sessionId}${qs({ day: now?.day, time: now?.time })}`, { method: 'DELETE' });
 
 export const getAttendance = (userId, sessionId, { day, time }) =>
   api(`/users/${userId}/attendance/${sessionId}${qs({ day, time })}`);
