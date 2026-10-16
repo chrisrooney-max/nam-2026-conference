@@ -48,7 +48,7 @@ export function UserSwitcher() {
       {open && (
         <div
           role="listbox"
-          className="glass absolute right-0 top-full z-50 mt-2 w-[19rem] animate-rise overflow-hidden rounded-2xl border border-hairline shadow-2xl shadow-black/60"
+          className="absolute right-0 top-full z-50 mt-2 w-[19rem] animate-rise overflow-hidden rounded-2xl border border-hairline bg-overlay shadow-2xl shadow-black/60"
         >
           <div className="border-b border-hairline px-4 py-2.5">
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-faint">Viewing as</p>
