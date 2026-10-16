@@ -176,6 +176,10 @@ scheduled here".
   silently (nothing renders / no-op).
 - `SectionHeader` is each page's visible title; the smoke suite finds pages by it.
 - `format.time` expects `HH:MM`, not an ISO timestamp.
+- A badge on a cover or photo sits on a fixed dark surface, so its text cannot use
+  an accent shade the light theme remaps (-200/-300/-400): `<Chip accent>` text
+  goes dark orange on the dark pill. Use `text-white` or an unmapped shade
+  (`!text-amber-100`, as `FoodPage` does), and look at it in light before "done".
 
 ## Where to change…
 

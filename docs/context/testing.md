@@ -160,6 +160,10 @@ print a markdown table to `$GITHUB_STEP_SUMMARY` and exit 0 even with no report.
 - `npm run verify` reseeds first, so a run killed halfway cannot poison the next; within
   a run nothing is reset. A test that books a seat and does not release it hits the
   overlap guard on its next run.
+- `addInitScript` runs on every navigation, `reload()` included. A helper that sets
+  storage there overwrites what the page just saved, so a persistence test cannot
+  pass and a first-visit test cannot start; write once per tab and let the caller
+  opt out, as `visit()` does with `theme`.
 - There is no way to undo a check-in — pick a session the lane's attendee has not attended.
 - `test.describe.configure({ mode: 'serial' })` plus a conditional `test.skip()` abandons
   the rest of the group; do not combine them.
