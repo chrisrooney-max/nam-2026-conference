@@ -36,10 +36,13 @@ export function UserSwitcher() {
         // The name is hidden on small screens, so the button needs its own label.
         aria-label={`Viewing as ${currentUser.name}. Switch attendee.`}
         className={cx(
-          'flex items-center gap-2 rounded-full border border-hairline bg-raised/60 py-1 pl-1 pr-2.5 transition-colors',
-          'hover:border-white/15 hover:bg-overlay focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400',
+          'flex items-center gap-2 rounded-full border border-dashed border-amber-400/60 bg-raised/60 py-1 pl-2 pr-2.5 transition-colors',
+          'hover:border-amber-300 hover:bg-overlay focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400',
         )}
       >
+        {/* Demo cues: there is no login, so this must not read as an account menu. */}
+        <span className="whitespace-nowrap text-[9px] font-bold uppercase leading-none tracking-wide text-amber-300">Viewing as</span>
+        <span className="rounded bg-amber-400/15 px-1 py-px text-[9px] font-bold uppercase leading-none tracking-wide text-amber-300">Demo</span>
         <Avatar name={currentUser.name} initials={currentUser.initials} accent={currentUser.accent} imageUrl={currentUser.imageUrl} size="sm" />
         <span className="hidden text-xs font-semibold sm:block">{currentUser.name.split(' ')[0]}</span>
         <Icon name="chevronDown" className={cx('size-3.5 text-faint transition-transform', open && 'rotate-180')} />

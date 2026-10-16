@@ -125,7 +125,10 @@ sticky `glass` header, `<main id="main">`, and the footer.
 - Footer: three `nav` columns (Programme, On site, Conference) built from an
   inline array of `[label, to]`, plus `conference.dates · conference.city` from
   bootstrap and a plain `<a href="/api/bootstrap">`.
-- `UserSwitcher` sits in the header once `ready`: a `listbox` of
+- `UserSwitcher` sits in the header once `ready`. Closed, it is deliberately
+  not styled like an account menu (there is no login): a dashed amber border,
+  a visible "Viewing as" caption and a "Demo" tag, kept on mobile (only the
+  first name hides below `sm`); `aria-label` is unchanged. Open, a `listbox` of
   `useConference().users`, calls `setCurrentUserId`; closes on outside pointer
   or Escape. Each row shows "N on agenda"; every row but the signed-in
   attendee's reads `u.reservedCount` from `/bootstrap` (frozen at load), but
