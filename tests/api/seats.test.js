@@ -330,9 +330,22 @@ describe('Waitlists and clashing seats', () => {
     assert.equal(res.body.status, null, 'no waitlist place was written');
   });
 
+  test('promotion releases a backup that has finished unattended, so a missed talk never blocks the queue', async () => {
+    const [waiter, next] = [4, 6];
+    const { a, b, holder } = await backupFixture(waiter, next, afterClockCase);
+    afterClockCase = { a, b, holder: waiter };
+
+    // the clock sent is after the backup ended: nothing is lost by letting it go
+    const released = await api.del(`/users/${holder}/reservations/${b.id}?day=${a.day}&time=${a.endsAt}`);
+    assert.equal(released.body.promoted, waiter);
+    assert.equal((await api.get(`/users/${waiter}/reservations/${b.id}`)).body.status, 'confirmed');
+    assert.equal((await api.get(`/users/${waiter}/reservations/${a.id}`)).body.status, null);
+    assert.equal((await api.get(`/users/${next}/reservations/${b.id}`)).body.status, 'waitlisted');
+  });
+
   // These two come last: a check-in cannot be undone, and each outlives its test.
   test('promotion skips a waiter whose backup is checked in, even on a bare DELETE, and promotes the next', async () => {
-    const [waiter, next] = [4, 6]; // 5 holds B by now, 3 is a bystander
+    const [waiter, next] = [3, 5]; // the cases above leave 4 holding B, and 6 is a bystander
     const { a, b, holder } = await backupFixture(waiter, next, afterClockCase);
     const checked = await api.put(`/users/${waiter}/checkins/${a.id}`, { day: a.day, time: shiftTime(a.startsAt, 5) });
     assert.equal(checked.body.checkedIn, true, 'the waiter is in the room');
