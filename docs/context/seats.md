@@ -36,24 +36,41 @@ status 'confirmed'|'waitlisted', created_at)` and the counter
   2. already holding any reservation → current `seatState`, no write (idempotent);
   3. `now.day` and `now.time` both present and the session is over (earlier day,
      or same day with `ends_at <= now.time`) → `{ ...seatState, rejected: 'ended' }`;
-  4. the `overlapping` statement finds a **confirmed** reservation of this user
-     on the same day whose interval intersects → `{ ...seatState, rejected:
-     'overlap', wanted, conflictsWith }`, each `{ id, title, startsAt, endsAt,
-     roomName, venueName }`;
+  4. `overlapping.all(...)` returns every **confirmed** reservation of this user
+     on the same day whose interval intersects (each with `checked_in`). If there
+     is one and the wanted session has **room**, or any clash is *locked* (below)
+     → `{ ...seatState, rejected: 'overlap', wanted, conflictsWith }`, each `{ id,
+     title, startsAt, endsAt, roomName, venueName }`; `conflictsWith` is the
+     locked clash if there is one;
   5. otherwise insert as `confirmed` (and `bumpSeats +1`) or, if
-     `seats_taken >= capacity`, as `waitlisted` with no bump.
-- `releaseSeat(userId, sessionId)` — `db.transaction`. Deletes the row; if it
-  was `confirmed`, `bumpSeats -1`, then walks `waitingInOrder` (`created_at,
-  user_id`) and promotes the first waiter who has no clashing confirmed seat
-  (same `overlapping` statement), re-bumping +1. Returns `{ ...seatState,
-  promoted: userId|null }`. Releasing nothing returns plain `seatState`.
+     `seats_taken >= capacity`, as `waitlisted` with no bump. A **full** session
+     over releasable clashes is the waitlisted case and returns `{ ...seatState,
+     backup }` — the clash you keep (same brief shape as `conflictsWith`). The
+     waitlisted talk is the one you prefer; the confirmed clash is the backup.
+- **Locked seats.** `isLocked(row, now)`: a clashing seat is locked when the
+  attendee has a `check_ins` row for it, or when the clock (`now.day`+`now.time`,
+  both) says it is running (`starts_at <= time < ends_at`). Locked seats are never
+  released for a better one — a check-in cannot be undone and deleting the row
+  would drop an attended talk and its rating prompt. A seat that has finished and
+  was never attended is releasable. The check-in test needs no clock, so it
+  protects even a bare DELETE.
+- `releaseSeat(userId, sessionId, now)` — `db.transaction`; a no-op returning
+  plain `seatState` when you hold nothing. Otherwise `freeSeat` (plain function,
+  recursive) deletes the row; if it was `confirmed`, `bumpSeats -1`, then walks
+  `waitingInOrder` (`created_at, user_id`) and promotes the first waiter **none of
+  whose clashing confirmed seats is locked**, re-bumping +1. A waiter with a
+  locked clash is skipped and keeps their place. The promoted waiter's clashing
+  seats are then released with `freeSeat` — each hands its own seat to that
+  session's next eligible waiter, so a promotion can cascade. `now` threads
+  through. Returns `{ ...seatState, promoted: userId|null }` (the first waiter
+  promoted, not the cascade's).
 
 **Routes — `server/routes/users.js`** (mounted at `/api/users`):
 
 | Route | Calls | Notes |
 | --- | --- | --- |
 | `PUT /:id/reservations/:sessionId` body `{day,time}` | `reserveSeat` | 404 unknown user/session; **409** with the state body when `rejected` is set |
-| `DELETE /:id/reservations/:sessionId` | `releaseSeat` | no user-exists check |
+| `DELETE /:id/reservations/:sessionId` optional query `day`,`time` | `releaseSeat` | no user-exists check; the clock is a query string because a DELETE has no body |
 | `GET /:id/reservations/:sessionId` | `seatState` | |
 
 The same file also owns routes from other areas — change them here, but the
@@ -66,15 +83,18 @@ doc); attendance, check-in and rating routes (see the attendance doc); and
 through the module-scope `follow`/`unfollow` statements.
 
 **Client.** `src/lib/api.js:reserveSeat(userId, sessionId, now)` PUTs `now` as
-the body; `api()` throws on non-2xx but keeps `err.status` and `err.payload`.
+the body; `releaseSeat(userId, sessionId, now)` appends it as `?day=&time=`; `api()` throws on non-2xx but keeps `err.status` and `err.payload`.
 `src/lib/store.jsx` (architecture owns it) holds the seat state:
 
 - `reservations: Map<sessionId, status>` loaded from `GET /users/:id` on user
   switch; `seatCounts: Map<sessionId, counts>` filled by `applySeatState`.
 - `reserveSeat` sends `clock`, catches a 409 and uses `err.payload`. `'ended'`
   → toast only; `'overlap'` → `setConflict(state)` and nothing applied;
-  otherwise `applySeatState` + toast ("Seat booked" or the waitlist position).
-- `releaseSeat(id, session)` → `applySeatState` + toast; the message differs
+  otherwise `applySeatState` + toast ("Seat booked", the waitlist position, or —
+  when the response has `backup` — the position plus "You keep “<title>” until a
+  place opens, then it is released." A queue over a held seat is never a dialog).
+- `releaseSeat(id, session)` (sends `clock`, as does `resolveConflict`'s release)
+  → `applySeatState` + toast; the message differs
   when `promoted`. The `action: { label: 'Undo', onClick: () => reserveSeat(id) }`
   is attached **only** when a `session` is passed and `hasEnded(session, clock)`
   is false — Undo is a fresh reservation and the API refuses one for a finished
@@ -109,14 +129,18 @@ and can still be released.
 Testids: `seat-panel`, `seat-count`, `seats-left`, `reservation-confirmed`,
 `reservation-waitlisted`, `reserve-seat`, `session-ended-seat`, `session-ended`,
 `release-seat`, `conflict-dialog`,
-`conflict-keep`, `conflict-swap`.
+`conflict-keep`, `conflict-swap`. The backup toast is asserted in
+`tests/seats.spec.js` (lane `seats.backup`); the API cases, including the
+cascade and the locked-backup skips, are in `tests/api/seats.test.js`.
 
 ## Invariants
 
 - `seats_taken` moves only inside `reserveSeat`/`releaseSeat`, and only for
   confirmed rows; `bumpSeats` clamps at 0.
 - A waitlist place never counts for the overlap guard — you may queue for two
-  clashing sessions, and promotion is what skips you.
+  clashing sessions. Promotion into one of them releases the confirmed clash
+  (the backup), unless it is locked, so no attendee holds two confirmed seats in
+  a slot.
 - The `ended` guard runs only when the client sends both `day` and `time`; a
   bare PUT books anything. `new Date()` is used only for `created_at`.
 - Waitlist order is `created_at` (ISO string) then `user_id`; the position in
@@ -131,6 +155,12 @@ Testids: `seat-panel`, `seat-count`, `seats-left`, `reservation-confirmed`,
   queue and can itself hit the overlap guard, which is why it is not offered at
   all once the session has ended (the 409 `ended` toast in `reserveSeat` now
   only covers a session that ends between page load and click).
+- The promoted attendee is not on screen when it happens (no push channel), so
+  the swap is explained by the toast at queue time, not at promotion. A cascade
+  that promotes the *releasing* attendee elsewhere leaves their store stale
+  until reload.
+- A skipped waiter is reconsidered only on the next freed seat, not when time
+  later unlocks their backup.
 - `SeatPanel` must not read `session.seats.status`: that payload is stale after
   a release (see CLAUDE.md § There is exactly one action).
 - The API tests use `startApi()` and need no cleanup; `tests/seats.spec.js`

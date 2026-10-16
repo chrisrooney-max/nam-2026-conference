@@ -108,9 +108,11 @@ export function ConferenceProvider({ children }) {
 
     applySeatState(state);
     toast({
-      message: state.status === 'waitlisted'
-        ? `Room is full — you are #${state.waitlistPosition} on the waitlist`
-        : 'Seat booked',
+      message: state.backup
+        ? `Room is full — you are #${state.waitlistPosition} on the waitlist. You keep “${state.backup.title}” until a place opens, then it is released.`
+        : state.status === 'waitlisted'
+          ? `Room is full — you are #${state.waitlistPosition} on the waitlist`
+          : 'Seat booked',
       icon: state.status === 'waitlisted' ? 'clock' : 'ticket',
     });
     return state;
@@ -123,7 +125,7 @@ export function ConferenceProvider({ children }) {
     * cannot re-open that by forgetting to pass it.
     */
   const releaseSeat = useCallback(async (sessionId, session) => {
-    const state = await api.releaseSeat(currentUserId, sessionId);
+    const state = await api.releaseSeat(currentUserId, sessionId, clock);
     applySeatState(state);
     const canUndo = session ? !hasEnded(session, clock) : false;
     toast({
@@ -144,7 +146,7 @@ export function ConferenceProvider({ children }) {
     if (!conflict) return;
     if (swap) {
       try {
-        applySeatState(await api.releaseSeat(currentUserId, conflict.conflictsWith.id));
+        applySeatState(await api.releaseSeat(currentUserId, conflict.conflictsWith.id, clock));
         const state = await api.reserveSeat(currentUserId, conflict.wanted.id, clock);
         applySeatState(state);
         toast(state.status === 'waitlisted'
