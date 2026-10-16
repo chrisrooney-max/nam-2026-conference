@@ -37,7 +37,7 @@ export function UserSwitcher() {
         aria-label={`Viewing as ${currentUser.name}. Switch attendee.`}
         className={cx(
           'flex items-center gap-2 rounded-full border border-hairline bg-raised/60 py-1 pl-1 pr-2.5 transition-colors',
-          'hover:border-white/15 hover:bg-overlay focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400',
+          'hover:border-ink/15 hover:bg-overlay focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400',
         )}
       >
         <Avatar name={currentUser.name} initials={currentUser.initials} accent={currentUser.accent} imageUrl={currentUser.imageUrl} size="sm" />

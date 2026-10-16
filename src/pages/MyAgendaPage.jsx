@@ -54,7 +54,7 @@ function SpeakingPanel({ user }) {
             <Link
               key={s.id}
               to={`/sessions/${s.id}`}
-              className="group flex flex-col rounded-2xl border border-hairline bg-surface/80 p-4 transition-colors hover:border-white/15 hover:bg-raised/70"
+              className="group flex flex-col rounded-2xl border border-hairline bg-surface/80 p-4 transition-colors hover:border-ink/15 hover:bg-raised/70"
             >
               <div className="flex items-center justify-between gap-2 font-mono text-[11px]">
                 <span className="text-muted">{dayLabel(s.day).replace(',', ' ·')}</span>

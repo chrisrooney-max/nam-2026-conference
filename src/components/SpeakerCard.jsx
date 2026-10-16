@@ -44,7 +44,7 @@ export function SpeakerCard({ speaker, variant = 'grid' }) {
       to={`/speakers/${speaker.id}`}
       className={cx(
         'group relative flex flex-col items-center gap-3 rounded-xl border border-hairline bg-raised p-5 text-center',
-        'transition-all duration-200 hover:-translate-y-0.5 hover:border-white/20 hover:bg-overlay/70',
+        'transition-all duration-200 hover:-translate-y-0.5 hover:border-ink/20 hover:bg-overlay/70',
         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400',
       )}
     >

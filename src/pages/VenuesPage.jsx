@@ -73,7 +73,7 @@ function VenueFacts({ venue }) {
         </div>
       </div>
 
-      <dl className="mt-5 grid grid-cols-2 border-l border-t border-white/[0.08] sm:grid-cols-5">
+      <dl className="mt-5 grid grid-cols-2 border-l border-t border-ink/[0.08] sm:grid-cols-5">
         {[
           [venue.rooms.length, 'Stages'],
           [venue.sessionCount, 'Sessions'],
@@ -81,7 +81,7 @@ function VenueFacts({ venue }) {
           [`${venue.opensAt}–${venue.closesAt}`, 'Open'],
           [venue.wifiSsid, 'Wifi'],
         ].map(([value, label]) => (
-          <div key={label} className="border-b border-r border-white/[0.08] px-3 py-2.5">
+          <div key={label} className="border-b border-r border-ink/[0.08] px-3 py-2.5">
             <dt className="sr-only">{label}</dt>
             <dd>
               <span className="block truncate font-display text-lg leading-none">{value}</span>

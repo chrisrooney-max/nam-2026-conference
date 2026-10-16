@@ -6,6 +6,7 @@ import { RouteChange } from './RouteChange.jsx';
 import { ConflictDialog } from './ConflictDialog.jsx';
 import { Icon } from './Icon.jsx';
 import { cx } from './ui.jsx';
+import { useTheme } from '../lib/theme.js';
 
 const NAV = [
   { to: '/', label: 'Home', icon: 'sparkle', end: true },
@@ -28,6 +29,38 @@ function Logo() {
         <span className="block text-[9px] font-bold uppercase tracking-[0.22em] text-faint">Las Vegas ’26</span>
       </span>
     </NavLink>
+  );
+}
+
+const THEMES = [
+  { choice: 'light', label: 'Light', icon: 'sun' },
+  { choice: 'dark', label: 'Dark', icon: 'moon' },
+  { choice: 'system', label: 'System', icon: 'monitor' },
+];
+
+/** Light / Dark / System, as one segmented control. */
+function ThemeToggle() {
+  const { choice, setChoice } = useTheme();
+  return (
+    <div role="group" aria-label="Theme" className="flex items-center gap-0.5 rounded-full border border-hairline bg-raised/60 p-0.5">
+      {THEMES.map((t) => (
+        <button
+          key={t.choice}
+          type="button"
+          onClick={() => setChoice(t.choice)}
+          aria-pressed={choice === t.choice}
+          aria-label={t.label}
+          title={t.label}
+          data-testid={`theme-${t.choice}`}
+          className={cx(
+            'grid size-7 place-items-center rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 sm:size-8',
+            choice === t.choice ? 'bg-overlay text-ink' : 'text-faint hover:text-ink',
+          )}
+        >
+          <Icon name={t.icon} className="size-4" />
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -95,6 +128,7 @@ export function Layout() {
           </nav>
 
           <div className="ml-auto flex items-center gap-2 lg:ml-0">
+            <ThemeToggle />
             {ready && <UserSwitcher />}
             <button
               type="button"

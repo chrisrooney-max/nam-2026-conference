@@ -87,7 +87,7 @@ function SpeakingStrip() {
           return (
             <li key={s.id}>
               <Link to={`/sessions/${s.id}`}
-                className="block rounded-xl border border-hairline bg-surface p-3 transition-colors hover:border-white/20">
+                className="block rounded-xl border border-hairline bg-surface p-3 transition-colors hover:border-ink/20">
                 <div className="flex items-baseline justify-between gap-2 font-mono text-[11px]">
                   <span className="text-muted">{shortDay(s.day)} · {fmtTime(s.startsAt)}</span>
                   <span className="text-ink">{s.seatsTaken}/{s.capacity}</span>

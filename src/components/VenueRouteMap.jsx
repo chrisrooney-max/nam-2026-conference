@@ -47,7 +47,7 @@ export function VenueRouteMap({ venues, routes, className }) {
         aria-label={`Map showing ${a.name} and ${b.name}, ${fastest?.minutes} minutes apart by ${fastest?.mode}`}>
         <defs>
           <pattern id="streets" width="60" height="60" patternUnits="userSpaceOnUse">
-            <path d="M60 0H0v60" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+            <path d="M60 0H0v60" fill="none" stroke="var(--color-ink)" strokeOpacity="0.05" strokeWidth="1" />
           </pattern>
           <linearGradient id="routeGrad" x1="0" y1="0" x2="1" y2="0">
             <stop offset="0%" stopColor={accentHex(a.accent)[0]} />
@@ -57,8 +57,8 @@ export function VenueRouteMap({ venues, routes, className }) {
 
         <rect width={W} height={H} fill="url(#streets)" />
         {/* a couple of arterial roads for context */}
-        <path d={`M0 ${H * 0.78} H${W}`} stroke="rgba(255,255,255,0.07)" strokeWidth="10" />
-        <path d={`M${W * 0.63} 0 V${H}`} stroke="rgba(255,255,255,0.055)" strokeWidth="7" />
+        <path d={`M0 ${H * 0.78} H${W}`} stroke="var(--color-ink)" strokeOpacity="0.07" strokeWidth="10" />
+        <path d={`M${W * 0.63} 0 V${H}`} stroke="var(--color-ink)" strokeOpacity="0.055" strokeWidth="7" />
 
         {/* the route */}
         <path d={path} fill="none" stroke="url(#routeGrad)" strokeWidth="2.5"
@@ -67,8 +67,8 @@ export function VenueRouteMap({ venues, routes, className }) {
         {/* distance marker riding the arc */}
         <g transform={`translate(${midX}, ${midY + 34})`}>
           <rect x="-62" y="-17" width="124" height="34" rx="17" fill="var(--color-ground)" stroke="var(--color-hairline)" />
-          <text x="0" y="-1" textAnchor="middle" className="fill-white text-[13px] font-bold">6.2 miles</text>
-          <text x="0" y="11" textAnchor="middle" className="fill-white/45 text-[10px]">
+          <text x="0" y="-1" textAnchor="middle" className="fill-ink text-[13px] font-bold">6.2 miles</text>
+          <text x="0" y="11" textAnchor="middle" className="fill-ink/45 text-[10px]">
             {fastest ? `${fastest.minutes} min by ${fastest.mode.toLowerCase()}` : ''}
           </text>
         </g>
@@ -81,8 +81,8 @@ export function VenueRouteMap({ venues, routes, className }) {
               <circle r="17" fill={light} opacity="0.22" />
               <circle r="8" fill={light} />
               <circle r="3" fill="var(--color-ground)" />
-              <text y="-44" textAnchor="middle" className="fill-white text-[15px] font-bold">{v.shortName}</text>
-              <text y="-28" textAnchor="middle" className="fill-white/45 text-[11px]">
+              <text y="-44" textAnchor="middle" className="fill-ink text-[15px] font-bold">{v.shortName}</text>
+              <text y="-28" textAnchor="middle" className="fill-ink/45 text-[11px]">
                 {v.roomCount} stages · {v.city.split(',')[0]}
               </text>
             </g>

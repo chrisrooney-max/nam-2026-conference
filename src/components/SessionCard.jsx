@@ -84,7 +84,7 @@ export function SessionCard({ session, variant = 'grid', showDay = false, attend
     return (
       <div data-testid="session-card" data-done={isDone ? 'true' : 'false'} className={cx(
         'group relative flex scroll-mt-28 items-stretch gap-0 overflow-hidden rounded-xl border bg-raised transition-colors',
-        'hover:border-white/20 hover:bg-overlay',
+        'hover:border-ink/20 hover:bg-overlay',
         isLive ? 'border-rose-400/45' : onAgenda ? 'border-emerald-400/30' : 'border-hairline',
         isDone && 'opacity-55',
       )}>
@@ -141,7 +141,7 @@ export function SessionCard({ session, variant = 'grid', showDay = false, attend
       data-done={isDone ? 'true' : 'false'}
       className={cx(
         'group relative flex scroll-mt-28 flex-col overflow-hidden rounded-xl border bg-raised transition-colors duration-150',
-        'hover:border-white/20 hover:bg-overlay/70',
+        'hover:border-ink/20 hover:bg-overlay/70',
         isLive ? 'border-rose-400/50' : onAgenda ? 'border-emerald-400/35' : 'border-hairline',
         feature && 'sm:col-span-2',
         isDone && 'opacity-60',

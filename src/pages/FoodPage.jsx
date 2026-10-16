@@ -35,7 +35,7 @@ function VendorCard({ vendor, venue, now, featured }) {
     <article
       className={cx(
         'group relative flex flex-col overflow-hidden rounded-xl border bg-raised transition-colors',
-        'hover:border-white/20 hover:bg-overlay/70',
+        'hover:border-ink/20 hover:bg-overlay/70',
         featured ? 'border-amber-400/30 sm:col-span-2' : 'border-hairline',
         !open && 'opacity-70',
       )}
@@ -46,7 +46,7 @@ function VendorCard({ vendor, venue, now, featured }) {
           className="size-full transition-transform duration-500 group-hover:scale-105" />
         <div className="absolute inset-0 bg-gradient-to-t from-raised via-raised/40 to-transparent" />
         <span className={cx(
-          'absolute left-4 grid place-items-center rounded-2xl bg-raised/85 backdrop-blur-sm ring-1 ring-white/10',
+          'absolute left-4 grid place-items-center rounded-2xl bg-raised/85 backdrop-blur-sm ring-1 ring-ink/10',
           featured ? '-bottom-5 size-16 text-4xl' : '-bottom-4 size-12 text-2xl',
         )} aria-hidden="true">
           {vendor.emoji}

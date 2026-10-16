@@ -29,7 +29,7 @@ function RunningCard({ session, now, upcoming = false, yours = false }) {
   return (
     <Link
       to={`/sessions/${session.id}`}
-      className="group relative flex min-w-[17rem] flex-1 flex-col overflow-hidden rounded-xl border border-hairline bg-raised transition-colors hover:border-white/20 hover:bg-overlay/70"
+      className="group relative flex min-w-[17rem] flex-1 flex-col overflow-hidden rounded-xl border border-hairline bg-raised transition-colors hover:border-ink/20 hover:bg-overlay/70"
     >
       <span className={cx('absolute inset-y-0 left-0 w-1 bg-gradient-to-b', a.grad)} />
       <div className="flex flex-1 flex-col p-4 pl-5">

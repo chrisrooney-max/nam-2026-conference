@@ -23,7 +23,7 @@ function SponsorCard({ sponsor, style, venue }) {
     <div
       className={cx(
         'group relative flex flex-col overflow-hidden rounded-xl border border-hairline bg-raised transition-colors',
-        'hover:border-white/20 hover:bg-overlay/70',
+        'hover:border-ink/20 hover:bg-overlay/70',
       )}
     >
       {style.banner && (
@@ -40,7 +40,7 @@ function SponsorCard({ sponsor, style, venue }) {
             seed={sponsor.name}
             accent={sponsor.accent}
             variant="mark"
-            className={cx('shrink-0 rounded-xl', style.mark, style.banner ? 'ring-4 ring-raised' : 'ring-1 ring-white/10')}
+            className={cx('shrink-0 rounded-xl', style.mark, style.banner ? 'ring-4 ring-raised' : 'ring-1 ring-ink/10')}
           />
           <div className={cx('min-w-0 flex-1', style.banner && 'pt-8')}>
             {/* Names wrap rather than truncate — "Blackbird S…" helps nobody. */}

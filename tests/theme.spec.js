@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { visit, failOnPageErrors } from './helpers.js';
+import { visit, failOnPageErrors, shotForPR } from './helpers.js';
 
 /**
  * Light / Dark / System. The theme is pinned through visit() and the OS scheme
@@ -105,6 +105,7 @@ test('light is legible: pale ground, dark ink, and a header that is not the dark
   expect(light.header).not.toBe(dark.header);
   expect(luma(light.header)).toBeGreaterThan(0.7);
   expect(light.scheme).toBe('light');
+  await shotForPR(page, 'Home in the light theme, with the Light Dark System control in the header');
   expect(errors).toEqual([]);
 });
 

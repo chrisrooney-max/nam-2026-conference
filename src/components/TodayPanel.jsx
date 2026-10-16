@@ -14,7 +14,7 @@ function BookedRow({ session, now, live }) {
   return (
     <Link
       to={`/sessions/${session.id}`}
-      className="group relative flex flex-1 items-start gap-3 overflow-hidden rounded-xl border border-hairline bg-raised p-4 transition-colors hover:border-white/20 hover:bg-overlay/70"
+      className="group relative flex flex-1 items-start gap-3 overflow-hidden rounded-xl border border-hairline bg-raised p-4 transition-colors hover:border-ink/20 hover:bg-overlay/70"
     >
       <span className={cx('absolute inset-y-0 left-0 w-1 bg-gradient-to-b', a.grad)} />
       <div className="min-w-0 flex-1 pl-1.5">

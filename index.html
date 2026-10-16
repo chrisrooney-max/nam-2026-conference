@@ -1,9 +1,21 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>ORBIT '26 — The Applied AI Conference</title>
+    <script>
+      // Apply the stored theme before first paint. Same rules as resolveTheme() in src/lib/theme.js.
+      (function () {
+        var theme = 'dark';
+        try {
+          var c = localStorage.getItem('orbit:theme');
+          if (c === 'light') theme = 'light';
+          else if (c === 'system') theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        } catch (e) {}
+        document.documentElement.setAttribute('data-theme', theme);
+      })();
+    </script>
     <meta name="description" content="ORBIT '26. Four days, 377 sessions, two sites, one very large question. Las Vegas, October 12–15 2026." />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛰️</text></svg>" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />

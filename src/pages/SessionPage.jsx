@@ -211,7 +211,7 @@ export function SessionPage() {
                 <Link
                   key={sp.id}
                   to={`/speakers/${sp.id}`}
-                  className="group flex gap-3.5 rounded-2xl border border-hairline bg-surface/70 p-4 transition-colors hover:border-white/15 hover:bg-raised/70"
+                  className="group flex gap-3.5 rounded-2xl border border-hairline bg-surface/70 p-4 transition-colors hover:border-ink/15 hover:bg-raised/70"
                 >
                   <Avatar name={sp.name} initials={sp.initials} accent={sp.accent} imageUrl={sp.imageUrl} size="lg" />
                   <div className="min-w-0">

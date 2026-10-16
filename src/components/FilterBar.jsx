@@ -53,7 +53,7 @@ export function TabStrip({ tabs, value, onChange, className }) {
               'shrink-0 rounded-xl border px-4 py-2.5 text-left transition-all',
               active
                 ? 'border-violet-400/50 bg-violet-500/15 text-ink'
-                : 'border-hairline bg-surface text-muted hover:border-white/20 hover:bg-raised hover:text-ink',
+                : 'border-hairline bg-surface text-muted hover:border-ink/20 hover:bg-raised hover:text-ink',
             )}
           >
             <span className="block text-sm font-semibold leading-tight">{t.label}</span>
@@ -91,7 +91,7 @@ export function ChipGroup({ label, value, onChange, options, className }) {
               'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-semibold transition-all',
               active
                 ? o.activeClass ?? 'border-violet-400/50 bg-violet-500/15 text-ink'
-                : 'border-hairline bg-raised text-muted hover:border-white/20 hover:text-ink',
+                : 'border-hairline bg-raised text-muted hover:border-ink/20 hover:text-ink',
               o.disabled && 'cursor-not-allowed opacity-40 hover:text-muted',
             )}
           >

@@ -164,7 +164,7 @@ export function SchedulePage() {
         <div className="flex flex-wrap gap-1.5">
           <button type="button" onClick={() => set('track', ALL)}
             className={cx('rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors',
-              filters.track === ALL ? 'border-white/25 bg-overlay text-ink' : 'border-hairline text-muted hover:text-ink')}>
+              filters.track === ALL ? 'border-ink/25 bg-overlay text-ink' : 'border-hairline text-muted hover:text-ink')}>
             All
           </button>
           {tracks.map((t) => {

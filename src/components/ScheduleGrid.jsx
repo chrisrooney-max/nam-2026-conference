@@ -148,7 +148,7 @@ export function ScheduleGrid({ sessions }) {
                             to={`/sessions/${s.id}`}
                             className={cx(
                               'group relative flex h-full min-h-[5rem] flex-col rounded-lg border p-2.5 transition-all',
-                              'hover:-translate-y-0.5 hover:border-white/25 hover:bg-overlay',
+                              'hover:-translate-y-0.5 hover:border-ink/25 hover:bg-overlay',
                               live ? 'border-rose-400/50 bg-rose-500/[0.07]'
                                 : seat ? 'border-emerald-400/45 bg-emerald-400/[0.06]'
                                 : 'border-hairline bg-raised',

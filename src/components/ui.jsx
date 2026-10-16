@@ -26,7 +26,7 @@ export function Avatar({ name, initials, accent: accentName = 'violet', size = '
   const base = cx(
     'relative shrink-0 overflow-hidden rounded-full',
     AVATAR_SIZES[size],
-    ring && 'ring-1 ring-white/10',
+    ring && 'ring-1 ring-ink/10',
     className,
   );
 
@@ -84,7 +84,7 @@ export function TrackPill({ track, className }) {
 /* --------------------------------- Button -------------------------------- */
 const BUTTON_VARIANTS = {
   primary: 'bg-gradient-to-r from-violet-600 to-violet-500 text-white hover:from-violet-500 hover:to-violet-400 shadow-lg shadow-violet-900/40',
-  ghost: 'border border-hairline bg-raised text-ink hover:bg-overlay hover:border-white/20',
+  ghost: 'border border-hairline bg-raised text-ink hover:bg-overlay hover:border-ink/20',
   subtle: 'text-muted hover:text-ink hover:bg-raised',
   danger: 'border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20',
 };
