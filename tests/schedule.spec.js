@@ -99,6 +99,104 @@ test.describe('Schedule', () => {
   });
 });
 
+test.describe('Schedule track filter', () => {
+  // Read-only, so no data lane. The day is named in the URL and the clock is
+  // pinned, so the counts never depend on the hour the test runs.
+  test('tracks can be added and removed, and the URL, count and list follow', async ({ page, request }) => {
+    const days = await conferenceDays();
+    const day = days[0];
+    const { tracks } = await (await request.get(`${API}/bootstrap`)).json();
+    const countFor = async (slugs) => {
+      const q = slugs.length ? `&trackSlug=${slugs.join(',')}` : '';
+      return (await (await request.get(`${API}/sessions?day=${day}${q}`)).json()).length;
+    };
+    const populated = [];
+    for (const t of tracks) if (await countFor([t.slug]) > 0) populated.push(t);
+    expect(populated.length).toBeGreaterThanOrEqual(2);
+    const [a, b] = populated;
+    const pill = (t) => page.getByRole('complementary', { name: 'Schedule filters' })
+      .getByRole('button', { name: t.shortName ?? t.name, exact: true });
+    const count = page.getByTestId('result-count');
+    const expectCount = async (slugs) => {
+      const n = await countFor(slugs);
+      await expect(count).toHaveText(`${n} ${n === 1 ? 'session' : 'sessions'}`);
+    };
+
+    await visit(page, `/schedule?day=${day}&view=list`, { at: await momentOn(0, MID_SESSION_TIME) });
+    await waitForResults(page);
+    const filtersBtn = page.getByRole('button', { name: /^Filters/ });
+    if (await filtersBtn.isVisible()) await filtersBtn.click();
+    const everything = await countFor([]);
+    await expect(page.getByRole('button', { name: 'All', exact: true })).toHaveAttribute('aria-pressed', 'true');
+
+    // one track: as before
+    await pill(a).click();
+    await expect(page).toHaveURL(new RegExp(`track=${a.slug}(&|$)`));
+    await expect(pill(a)).toHaveAttribute('aria-pressed', 'true');
+    await expectCount([a.slug]);
+
+    // add a second
+    await pill(b).click();
+    await expect(pill(a)).toHaveAttribute('aria-pressed', 'true');
+    await expect(pill(b)).toHaveAttribute('aria-pressed', 'true');
+    await expect(page).toHaveURL(new RegExp(`track=${a.slug}(,|%2C)${b.slug}(&|$)`));
+    await expectCount([a.slug, b.slug]);
+    for (const card of await page.getByTestId('session-card').all()) {
+      await expect(card).toContainText(new RegExp(`${a.name}|${b.name}|${a.shortName ?? a.name}|${b.shortName ?? b.name}`));
+    }
+    await shotForPR(page, 'two tracks selected in the schedule filter');
+
+    // the selection survives a reload
+    await page.reload();
+    await waitForResults(page);
+    const reopened = page.getByRole('button', { name: /^Filters/ });
+    if (await reopened.isVisible()) await reopened.click();
+    await expect(pill(a)).toHaveAttribute('aria-pressed', 'true');
+    await expect(pill(b)).toHaveAttribute('aria-pressed', 'true');
+    await expectCount([a.slug, b.slug]);
+
+    // remove the first: only the second is left
+    await pill(a).click();
+    await expect(pill(a)).toHaveAttribute('aria-pressed', 'false');
+    await expect(page).toHaveURL(new RegExp(`track=${b.slug}(&|$)`));
+    await expectCount([b.slug]);
+
+    // removing the last one is the same as All
+    await pill(b).click();
+    await expect(page).not.toHaveURL(/track=/);
+    await expectCount([]);
+    await expect(count).toHaveText(`${everything} ${everything === 1 ? 'session' : 'sessions'}`);
+
+    // All clears a multi-selection in one go
+    await pill(a).click();
+    await pill(b).click();
+    await expectCount([a.slug, b.slug]);
+    await page.getByRole('button', { name: 'All', exact: true }).click();
+    await expect(page).not.toHaveURL(/track=/);
+    await expect(pill(a)).toHaveAttribute('aria-pressed', 'false');
+    await expect(pill(b)).toHaveAttribute('aria-pressed', 'false');
+    await expectCount([]);
+  });
+
+  test('two or more tracks drop the grid to the list, as one does', async ({ page, request }) => {
+    const days = await conferenceDays();
+    const { tracks } = await (await request.get(`${API}/bootstrap`)).json();
+    const [a, b] = tracks;
+    const at = await momentOn(0, MID_SESSION_TIME);
+
+    await visit(page, `/schedule?day=${days[0]}&view=grid&track=${a.slug}`, { at });
+    await waitForResults(page);
+    await expect(page.getByTestId('grid-blocked-notice')).toBeVisible();
+    await expect(page.getByTestId('schedule-grid')).toHaveCount(0);
+
+    await page.goto(`/schedule?day=${days[0]}&view=grid&track=${a.slug},${b.slug}`);
+    await waitForResults(page);
+    await expect(page.getByTestId('grid-blocked-notice')).toBeVisible();
+    await expect(page.getByTestId('schedule-grid')).toHaveCount(0);
+    await expect(page.getByTestId('view-grid')).toBeDisabled();
+  });
+});
+
 test.describe('Schedule grid', () => {
   test('the grid lays sessions out by time and room', async ({ page }) => {
     await visit(page, '/schedule?view=grid');
