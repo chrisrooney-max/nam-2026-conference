@@ -11,6 +11,7 @@ files:
   - server/routes/sessions.js
 tests:
   - tests/schedule.spec.js
+  - tests/api/track-filter.test.js
   - tests/session.spec.js
 related: [seats, attendance, agenda, venues, speakers, ui, clock]
 ---
@@ -29,7 +30,7 @@ and a bound `?` to `args`:
 | param | clause |
 | --- | --- |
 | `day` | `s.day = ?` |
-| `trackSlug` | `t.slug = ?` |
+| `trackSlug` | one slug or a comma-separated list: split on `,`, trimmed, empties dropped, then `t.slug IN (?, ?)` — an unknown slug matches nothing |
 | `venueId` / `roomId` | `v.id = ?` / `r.id = ?` |
 | `level` / `format` | `s.level = ?` / `s.format = ?` |
 | `q` | `LIKE %q%` on title, abstract, subtitle, or any speaker name (`EXISTS`) |
@@ -52,7 +53,7 @@ lists are plain `toSession` — no speakers/tags. **`/:id.ics`** is registered
 
 **`SchedulePage`** reads everything from `useSearchParams`:
 `day` (default `clock.day` if it is a conference day, else `days[0].date`),
-`track`, `venue` (venue id), `level`, `format`, `tag` (topic slug), `q`, `view`.
+`track` (a comma-separated list of track slugs), `venue` (venue id), `level`, `format`, `tag` (topic slug), `q`, `view`.
 Page keys map to API keys in the `useFetch` call (`track→trackSlug`,
 `venue→venueId`, `tag→tagSlug`). `set(key, value)` deletes the key for `'all'`/empty
 and writes with `{ replace: true }`; `clearAll` keeps `day` and an explicit `view`.
@@ -60,7 +61,7 @@ The empty state's heading is `No sessions match`, followed by the search text in
 
 **Grid vs list.** `requestedView = ?view ?? (useMediaQuery('(min-width: 1024px)') ? 'grid' : 'list')`.
 `BLOCKERS` is `[key, human phrase]` for `q`, `track`, `tag`, `level`, `format`;
-`blocker` is the first active one. With a blocker, `view` is forced to `'list'`,
+`blocker` is the first active one (any track selection, one or several, is the `track` blocker). With a blocker, `view` is forced to `'list'`,
 the Grid tab is `disabled` with a `title` naming the blocker, and
 `grid-blocked-notice` offers `clearBlocker` (deletes all blocker keys, sets
 `view=grid`). `venue` is deliberately not a blocker.
@@ -69,7 +70,7 @@ The list groups sessions by `startsAt` into `slot-<HH:MM>` sections of
 `SessionCard`s in a `grid-flow-row-dense` auto-fit grid. The filter rail
 (`aside`, hidden below `lg` until the Filters button toggles `railOpen`) holds
 `search-input`, `starred-count` (= `reservations.size`, the agenda count), day
-buttons `tab-<date>`, track pills, and `Select`s for venue/level/format/topic.
+buttons `tab-<date>`, track pills (toggles with `aria-pressed`: each adds its slug to `?track=` in click order or removes it, and `All`, pressed when none is selected, clears the list; `selectedTracks` is `filters.track` split on `,`), and `Select`s for venue/level/format/topic.
 Below `lg` the open rail is compact so the first card stays in view at 393×659: days in one
 row (no weekday or count), tracks in one scrolling row (the Day and Track headings turn screen-reader-only), selects in two columns, and the
 My agenda card is desktop-only (`starred-count` stays in the DOM, `hidden lg:block`);

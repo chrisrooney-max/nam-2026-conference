@@ -35,6 +35,7 @@ before(async () => {
     venue: boot.venues[0].id,
     room: boot.rooms[0].id,
     track: boot.tracks[0].slug,
+    track2: boot.tracks[1].slug,
     topic: boot.tags.find((t) => t.kind === 'topic').slug,
     level: boot.levels[0].name,
     format: boot.formats[0].name,
@@ -72,6 +73,7 @@ function filtered() {
   return [
     `/sessions?day=${days[1]}`,
     `/sessions?trackSlug=${ids.track}`,
+    `/sessions?trackSlug=${ids.track},${ids.track2}`,
     `/sessions?tagSlug=${ids.topic}`,
     `/sessions?venueId=${ids.venue}`,
     `/sessions?roomId=${ids.room}`,
