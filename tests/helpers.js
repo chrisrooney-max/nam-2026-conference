@@ -128,8 +128,6 @@ export const LANES = {
   'switcher.live-count': { desktop: { user: marcus, day: 3 }, mobile: { user: jonas, day: 0, clean: true } },
   // Writes interests only — no seat, check-in or rating — so both panes are agenda: false.
   'switcher.interests': { desktop: { user: kenji, day: 3, agenda: false }, mobile: { user: marcus, day: 3, agenda: false } },
-  // Empties interests for a while, which makes the name tab prompt: no other test signs in as these two on the switcher.
-  'switcher.interests-prompt': { desktop: { user: abraham, day: 3, agenda: false }, mobile: { user: sofia, day: 3, agenda: false } },
   // Check-ins and ratings only — no seat is booked, so agenda: false lets these
   // share a day with booking lanes (see lanes.test.js). The slot is the one
   // unattendedFor() picks its session from.

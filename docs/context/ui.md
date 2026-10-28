@@ -159,8 +159,10 @@ sticky `glass` header, `<main id="main">`, and the footer.
   a save, so `UserSwitcher` can tell a save from a skip. It follows § Dialogs: one `aria-pressed`
   toggle per `tags` entry of kind `topic` (`interest-<slug>`), seeded from `currentUser.interests`
   on each opening; Save calls `saveInterests` and closes, Cancel/Escape/backdrop do not save.
-  A test that empties an attendee's interests makes their name button prompt, so it must use a
-  lane no other test signs in as on the switcher (`switcher.interests-prompt`).
+  Every seeded attendee is signed in as by some test that clicks the name button, so a test must
+  not leave one with empty interests in the database, where it would make those tests meet the
+  prompt: the prompt test routes `/bootstrap` and the interests `PUT` in its own page, and the
+  Interests test puts the stored set back as soon as it has saved an empty one.
   When `currentUser.isSpeaker`, a `Your speaker profile` link
   (`own-speaker-profile`) sits between the list and the talk links and opens
   `/speakers/<currentUser.speakerId>`, which marks itself "This is you"
