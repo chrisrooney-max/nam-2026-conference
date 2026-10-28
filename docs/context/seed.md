@@ -100,7 +100,8 @@ pins it. Only dates change between machines; the PRNG output does not.
 - **An attendee's `interests` are topic tags** (`TAGS.topic`), never a tech,
   audience or vibe tag: what an attendee chooses from is the topic list, and a
   stored value it cannot show is one a save drops. Kenji's `Edge` (a tech tag)
-  did exactly that on #219. `tests/api/seed.test.js` holds every attendee to it.
+  did exactly that on #219. `tests/api/seed.test.js` holds every attendee to it, and
+  `PUT /api/users/:id/interests` (seats doc) rejects anything else with a 400.
 
 ## Gotchas
 

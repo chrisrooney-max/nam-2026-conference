@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useConference } from '../lib/store.jsx';
 import { Avatar, cx } from './ui.jsx';
 import { Icon } from './Icon.jsx';
+import { InterestsDialog } from './InterestsDialog.jsx';
 
 /**
  * The workshop's hosts, who agreed to appear as themselves. Only they are
@@ -26,6 +27,7 @@ export function UserSwitcher() {
   const { users = [], currentUser, setCurrentUserId, reservations } = useConference();
   const choices = users.filter((u) => u.company === HOST_COMPANY || u.id === currentUser?.id);
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
   const ref = useRef(null);
 
   useEffect(() => {
@@ -60,6 +62,9 @@ export function UserSwitcher() {
         <span className="hidden text-xs font-semibold sm:block">{currentUser.name.split(' ')[0]}</span>
         <Icon name="chevronDown" className={cx('size-3.5 text-faint transition-transform', open && 'rotate-180')} />
       </button>
+
+      {/* Outside `open &&` and the menu's ref: it is portalled, so the outside-pointerdown handler would unmount it mid-click. */}
+      <InterestsDialog open={editing} onClose={() => setEditing(false)} />
 
       {open && (
         <div
@@ -113,6 +118,19 @@ export function UserSwitcher() {
               );
             })}
           </ul>
+          <div className="border-t border-hairline p-1.5">
+            <button
+              type="button"
+              onClick={() => { setOpen(false); setEditing(true); }}
+              className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-raised"
+              data-testid="open-interests"
+            >
+              <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-amber-500/12 text-amber-300">
+                <Icon name="sparkle" className="size-3" />
+              </span>
+              <span className="text-sm font-semibold">Interests</span>
+            </button>
+          </div>
           {currentUser.isSpeaker && (
             <div className="border-t border-hairline p-1.5">
               <Link

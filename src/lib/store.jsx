@@ -65,6 +65,12 @@ export function ConferenceProvider({ children }) {
     toast({ message: following ? 'Unfollowed' : 'Following', icon: 'bell' });
   }, [currentUserId, followingIds, toast]);
 
+  /** Store the signed-in attendee's interests, then show them on `data.users` so a reopened dialog reads them. */
+  const saveInterests = useCallback(async (interests) => {
+    const updated = await api.setInterests(currentUserId, interests);
+    setData((d) => ({ ...d, users: d.users.map((u) => (u.id === updated.id ? { ...u, ...updated } : u)) }));
+  }, [currentUserId]);
+
   /** Apply a seat-state payload from the API to local state. */
   const applySeatState = useCallback((state) => {
     setSeatCounts((prev) => new Map(prev).set(state.sessionId, {
@@ -182,6 +188,7 @@ export function ConferenceProvider({ children }) {
       followingIds,
       isFollowing: (id) => followingIds.has(id),
       toggleFollow,
+      saveInterests,
       reservations,
       reservationFor: (id) => reservations.get(id) ?? null,
       seatCounts,
@@ -196,7 +203,7 @@ export function ConferenceProvider({ children }) {
       venueById: Object.fromEntries((data?.venues ?? []).map((v) => [v.id, v])),
       roomById: Object.fromEntries((data?.rooms ?? []).map((r) => [r.id, r])),
     };
-  }, [data, error, clock, currentUserId, followingIds, toggleFollow,
+  }, [data, error, clock, currentUserId, followingIds, toggleFollow, saveInterests,
       reservations, seatCounts, reserveSeat, releaseSeat, toggleSeat,
       conflict, resolveConflict]);
 

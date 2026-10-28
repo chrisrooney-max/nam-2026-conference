@@ -24,6 +24,8 @@ const myCheckIns = db.prepare('SELECT session_id FROM check_ins WHERE user_id = 
 const myRatings = db.prepare('SELECT session_id, stars FROM ratings WHERE user_id = ?');
 const follow = db.prepare('INSERT OR IGNORE INTO speaker_follows (user_id, speaker_id) VALUES (?, ?)');
 const unfollow = db.prepare('DELETE FROM speaker_follows WHERE user_id = ? AND speaker_id = ?');
+const topicNames = db.prepare("SELECT name FROM tags WHERE kind = 'topic'");
+const setInterests = db.prepare('UPDATE users SET interests = ? WHERE id = ?');
 
 /** Sessions this user is presenting, if their account is linked to a speaker. */
 const speakingSessions = (speakerId) =>
@@ -155,4 +157,23 @@ usersRouter.put('/:id/follows/:speakerId', (req, res) => {
 usersRouter.delete('/:id/follows/:speakerId', (req, res) => {
   unfollow.run(req.params.id, req.params.speakerId);
   res.json({ following: false, speakerId: Number(req.params.speakerId) });
+});
+
+/**
+ * PUT /api/users/:id/interests  { interests: [topic tag name, …] }
+ * Replaces the whole set. Only topic tags are accepted, the rule the seed
+ * keeps; an empty array clears them. Duplicates collapse, order is kept.
+ */
+usersRouter.put('/:id/interests', (req, res) => {
+  if (!userExists.get(req.params.id)) return res.status(404).json({ error: 'Attendee not found' });
+  const { interests } = req.body ?? {};
+  if (!Array.isArray(interests) || interests.some((t) => typeof t !== 'string')) {
+    return res.status(400).json({ error: 'interests must be an array of topic tag names' });
+  }
+  const allowed = new Set(topicNames.all().map((t) => t.name));
+  const unknown = interests.find((t) => !allowed.has(t));
+  if (unknown !== undefined) return res.status(400).json({ error: `Not a topic tag: ${unknown}` });
+
+  setInterests.run([...new Set(interests)].join(','), req.params.id);
+  res.json(toUser(getUser.get(req.params.id)));
 });
