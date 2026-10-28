@@ -85,7 +85,7 @@ test.describe('Interests', () => {
     const dialog = page.getByRole('dialog', { name: 'Your interests' });
     const open = async () => {
       await page.getByRole('button', { name: /Switch attendee/ }).click();
-      await page.getByTestId('open-interests').click();
+      await page.getByTestId('edit-interests').click();
       await expect(dialog).toBeVisible();
     };
     const pressed = async () => (await dialog
@@ -95,9 +95,10 @@ test.describe('Interests', () => {
     try {
       await visit(page, '/', { as: lane.user, at: await momentOn(0, '07:00') });
 
-      // the action sits in the menu for the signed-in attendee, beside the rows
+      // the action is a link in the menu's header, not a button of its own
       await page.getByRole('button', { name: /Switch attendee/ }).click();
-      await expect(page.getByTestId('open-interests')).toBeVisible();
+      await expect(page.getByTestId('open-interests')).toHaveCount(0);
+      await expect(page.getByTestId('edit-interests')).toBeVisible();
       await expect(page.getByRole('option', { selected: true })).toBeVisible();
       await page.keyboard.press('Escape');
 
@@ -141,9 +142,13 @@ test.describe('Interests', () => {
       for (const slug of wanted) await dialog.getByTestId(`interest-${slug}`).click();
       await dialog.getByRole('button', { name: 'Save' }).click();
       await expect(dialog).toBeHidden();
-      await open();
+
+      // with nothing stored the profile prompts instead; skipping it opens the menu
+      await page.getByRole('button', { name: /Switch attendee/ }).click();
+      await expect(dialog).toBeVisible();
       expect(await pressed()).toEqual([]);
       await page.keyboard.press('Escape');
+      await expect(page.getByRole('listbox', { name: 'Attendees' })).toBeVisible();
 
       // switching attendee still works
       await page.getByRole('button', { name: /Switch attendee/ }).click();
@@ -151,6 +156,77 @@ test.describe('Interests', () => {
       await expect(page.getByRole('button', { name: /Viewing as Andy Vays/ })).toBeVisible();
     } finally {
       await request.put(`${API}/users/${lane.user}/interests`, { data: { interests: original } });
+    }
+  });
+
+  test('an attendee with no interests is prompted whenever the profile opens, until they save one', async ({ page, request }, testInfo) => {
+    const lane = await laneFor('switcher.interests-prompt', testInfo);
+    const { tags } = await (await request.get(`${API}/bootstrap`)).json();
+    const topic = tags.find((t) => t.kind === 'topic');
+    const original = (await (await request.get(`${API}/users/${lane.user}`)).json()).interests;
+    const put = (interests) => request.put(`${API}/users/${lane.user}/interests`, { data: { interests } });
+
+    const dialog = page.getByRole('dialog', { name: 'Your interests' });
+    const menu = page.getByRole('listbox', { name: 'Attendees' });
+    const profile = page.getByRole('button', { name: /Switch attendee/ });
+
+    try {
+      await put([]);
+      await visit(page, '/', { as: lane.user, at: await momentOn(0, '07:00') });
+
+      // the first open is the prompt; Cancel skips it into the menu
+      await profile.click();
+      await expect(dialog).toBeVisible();
+      await expect(menu).toBeHidden();
+      await dialog.getByRole('button', { name: 'Cancel' }).click();
+      await expect(dialog).toBeHidden();
+      await expect(menu).toBeVisible();
+
+      // skipping changed nothing: the next open, and one after a reload, prompt again
+      await page.keyboard.press('Escape');
+      await profile.click();
+      await expect(dialog).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(menu).toBeVisible();
+      await page.reload();
+      await profile.click();
+      await expect(dialog).toBeVisible();
+      await shotForPR(page, 'The interests prompt, shown when an attendee with no interests opens their profile');
+
+      // saving nothing keeps the prompt coming
+      await dialog.getByRole('button', { name: 'Save' }).click();
+      await expect(dialog).toBeHidden();
+      await profile.click();
+      await expect(dialog).toBeVisible();
+
+      // one topic ends it: the menu opens directly, also after a reload
+      await dialog.getByTestId(`interest-${topic.slug}`).click();
+      await dialog.getByRole('button', { name: 'Save' }).click();
+      await expect(dialog).toBeHidden();
+      await profile.click();
+      await expect(menu).toBeVisible();
+      await expect(dialog).toBeHidden();
+      await page.keyboard.press('Escape');
+      await page.reload();
+      await profile.click();
+      await expect(menu).toBeVisible();
+      await expect(dialog).toBeHidden();
+
+      // the link in the menu edits them pre-filled, and closing it does not prompt
+      await page.getByTestId('edit-interests').click();
+      await expect(dialog).toBeVisible();
+      await expect(dialog.locator('[aria-pressed="true"]')).toHaveCount(1);
+      await expect(dialog.getByTestId(`interest-${topic.slug}`)).toHaveAttribute('aria-pressed', 'true');
+      await dialog.getByRole('button', { name: 'Cancel' }).click();
+      await expect(dialog).toBeHidden();
+      await expect(menu).toBeHidden();
+
+      // switching attendee still works
+      await profile.click();
+      await page.getByRole('option', { name: /Andy Vays/ }).click();
+      await expect(page.getByRole('button', { name: /Viewing as Andy Vays/ })).toBeVisible();
+    } finally {
+      await put(original);
     }
   });
 });
