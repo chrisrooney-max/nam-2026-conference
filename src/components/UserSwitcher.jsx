@@ -28,6 +28,8 @@ export function UserSwitcher() {
   const choices = users.filter((u) => u.company === HOST_COMPANY || u.id === currentUser?.id);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
+  // Opened by the name tab because interests are empty, rather than from the link.
+  const [prompting, setPrompting] = useState(false);
   const ref = useRef(null);
 
   useEffect(() => {
@@ -44,11 +46,23 @@ export function UserSwitcher() {
 
   if (!currentUser) return null;
 
+  // Stored interests decide this, so it survives a reload and follows the attendee.
+  const needsInterests = !currentUser.interests?.length;
+  const closeInterests = (saved) => {
+    setEditing(false);
+    // Skipping the prompt still leads to the menu; saving does not, and the next open will not prompt.
+    if (prompting && saved !== true) setOpen(true);
+    setPrompting(false);
+  };
+
   return (
     <div className="relative" ref={ref}>
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          if (!open && needsInterests) { setPrompting(true); setEditing(true); }
+          else setOpen((o) => !o);
+        }}
         aria-expanded={open}
         aria-haspopup="dialog"
         // The name is hidden on small screens, so the button needs its own label.
@@ -64,7 +78,7 @@ export function UserSwitcher() {
       </button>
 
       {/* Outside `open &&` and the menu's ref: it is portalled, so the outside-pointerdown handler would unmount it mid-click. */}
-      <InterestsDialog open={editing} onClose={() => setEditing(false)} />
+      <InterestsDialog open={editing} onClose={closeInterests} />
 
       {open && (
         <div
@@ -75,6 +89,14 @@ export function UserSwitcher() {
             <p className="mt-0.5 text-[11px] text-muted">
               Each attendee has their own agenda, follows and interests.
             </p>
+            <button
+              type="button"
+              onClick={() => { setOpen(false); setEditing(true); }}
+              className="mt-1.5 text-[11px] font-semibold text-violet-300 underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400"
+              data-testid="edit-interests"
+            >
+              Edit interests
+            </button>
           </div>
           <ul role="listbox" aria-label="Attendees" className="max-h-[26rem] overflow-y-auto p-1.5">
             {choices.map((u) => {
@@ -118,19 +140,6 @@ export function UserSwitcher() {
               );
             })}
           </ul>
-          <div className="border-t border-hairline p-1.5">
-            <button
-              type="button"
-              onClick={() => { setOpen(false); setEditing(true); }}
-              className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-raised"
-              data-testid="open-interests"
-            >
-              <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-amber-500/12 text-amber-300">
-                <Icon name="sparkle" className="size-3" />
-              </span>
-              <span className="text-sm font-semibold">Interests</span>
-            </button>
-          </div>
           {currentUser.isSpeaker && (
             <div className="border-t border-hairline p-1.5">
               <Link

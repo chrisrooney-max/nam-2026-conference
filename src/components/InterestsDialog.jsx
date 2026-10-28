@@ -7,7 +7,7 @@ import { Button, cx } from './ui.jsx';
 /**
  * The signed-in attendee's interests: every topic tag as a toggle, their
  * current ones on. Save stores the set; Cancel, Escape and the backdrop close
- * without saving. Portalled because it opens from the header, which is `glass`
+ * without saving; `onClose(true)` says it was saved. Portalled because it opens from the header, which is `glass`
  * and would otherwise be the containing block for `fixed`.
  */
 function Panel({ onClose }) {
@@ -47,7 +47,7 @@ function Panel({ onClose }) {
     setBusy(true);
     try {
       await saveInterests(topics.filter((t) => chosen.has(t.name)).map((t) => t.name));
-      onClose();
+      onClose(true);
     } catch (err) {
       toast({ message: `Could not save: ${err.message}`, icon: 'alert' });
       setBusy(false);
