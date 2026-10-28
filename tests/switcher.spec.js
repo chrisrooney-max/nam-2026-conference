@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { visit, momentOn, laneFor, bookableFor, ATTENDEES } from './helpers.js';
+import { visit, momentOn, laneFor, bookableFor, shotForPR, ATTENDEES, API } from './helpers.js';
 
 test.describe('Attendee switcher', () => {
   test('the switcher counts what is on an agenda, not what was "saved"', async ({ page }) => {
@@ -72,6 +72,87 @@ test.describe('Attendee switcher', () => {
     await expect(page.getByRole('option', { selected: true })).toContainText('Kenji Nakamura');
   });
 
+});
+
+test.describe('Interests', () => {
+  test('an attendee sets their interests from the menu, and they survive a reload', async ({ page, request }, testInfo) => {
+    const lane = await laneFor('switcher.interests', testInfo);
+    const { tags } = await (await request.get(`${API}/bootstrap`)).json();
+    const topics = tags.filter((t) => t.kind === 'topic');
+    const slugOf = (name) => topics.find((t) => t.name === name).slug;
+    const original = (await (await request.get(`${API}/users/${lane.user}`)).json()).interests;
+
+    const dialog = page.getByRole('dialog', { name: 'Your interests' });
+    const open = async () => {
+      await page.getByRole('button', { name: /Switch attendee/ }).click();
+      await page.getByTestId('open-interests').click();
+      await expect(dialog).toBeVisible();
+    };
+    const pressed = async () => (await dialog
+      .locator('[aria-pressed="true"]')
+      .evaluateAll((els) => els.map((e) => e.dataset.testid.replace('interest-', '')))).sort();
+
+    try {
+      await visit(page, '/', { as: lane.user, at: await momentOn(0, '07:00') });
+
+      // the action sits in the menu for the signed-in attendee, beside the rows
+      await page.getByRole('button', { name: /Switch attendee/ }).click();
+      await expect(page.getByTestId('open-interests')).toBeVisible();
+      await expect(page.getByRole('option', { selected: true })).toBeVisible();
+      await page.keyboard.press('Escape');
+
+      // the dialog lists topic tags only, with the current interests on
+      await open();
+      await expect(dialog.locator('[data-testid^="interest-"]')).toHaveCount(topics.length);
+      expect(await pressed()).toEqual(original.map(slugOf).sort());
+      await shotForPR(page, 'The interests dialog with the attendee\'s current topics selected');
+
+      // closing without saving, three ways
+      await dialog.getByTestId(`interest-${topics.find((t) => !original.includes(t.name)).slug}`).click();
+      await dialog.getByRole('button', { name: 'Cancel' }).click();
+      await expect(dialog).toBeHidden();
+      await open(); await page.keyboard.press('Escape'); await expect(dialog).toBeHidden();
+      await open(); await dialog.getByRole('button', { name: 'Close' }).click({ position: { x: 8, y: 8 } });
+      await expect(dialog).toBeHidden();
+      await open();
+      expect(await pressed()).toEqual(original.map(slugOf).sort());
+
+      // turn one off (when there is one) and one on, then save
+      const off = original[0];
+      const on = topics.find((t) => !original.includes(t.name));
+      if (off) await dialog.getByTestId(`interest-${slugOf(off)}`).click();
+      await dialog.getByTestId(`interest-${on.slug}`).click();
+      const wanted = [...original.filter((n) => n !== off).map(slugOf), on.slug].sort();
+      expect(await pressed()).toEqual(wanted);
+      await dialog.getByRole('button', { name: 'Save' }).click();
+      await expect(dialog).toBeHidden();
+
+      // reopening shows it, and so does a reload
+      await open();
+      expect(await pressed()).toEqual(wanted);
+      await page.keyboard.press('Escape');
+      await page.reload();
+      await open();
+      expect(await pressed()).toEqual(wanted);
+      await page.keyboard.press('Escape');
+
+      // an empty selection saves too
+      await open();
+      for (const slug of wanted) await dialog.getByTestId(`interest-${slug}`).click();
+      await dialog.getByRole('button', { name: 'Save' }).click();
+      await expect(dialog).toBeHidden();
+      await open();
+      expect(await pressed()).toEqual([]);
+      await page.keyboard.press('Escape');
+
+      // switching attendee still works
+      await page.getByRole('button', { name: /Switch attendee/ }).click();
+      await page.getByRole('option', { name: /Andy Vays/ }).click();
+      await expect(page.getByRole('button', { name: /Viewing as Andy Vays/ })).toBeVisible();
+    } finally {
+      await request.put(`${API}/users/${lane.user}/interests`, { data: { interests: original } });
+    }
+  });
 });
 
 test.describe('Your speaker profile', () => {

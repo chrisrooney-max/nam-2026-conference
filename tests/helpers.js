@@ -126,6 +126,8 @@ export const LANES = {
   // marcus/day 3 desktop and jonas/day 0 mobile are each used by no other lane,
   // so concurrent tests cannot collide on these attendee+day pairs.
   'switcher.live-count': { desktop: { user: marcus, day: 3 }, mobile: { user: jonas, day: 0, clean: true } },
+  // Writes interests only — no seat, check-in or rating — so both panes are agenda: false.
+  'switcher.interests': { desktop: { user: kenji, day: 3, agenda: false }, mobile: { user: marcus, day: 3, agenda: false } },
   // Check-ins and ratings only — no seat is booked, so agenda: false lets these
   // share a day with booking lanes (see lanes.test.js). The slot is the one
   // unattendedFor() picks its session from.
