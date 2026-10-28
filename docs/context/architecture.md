@@ -92,7 +92,9 @@ the routes. `/product-presentation` and `/engineering-presentation` sit outside 
 **`useConference()`** (`store.jsx:ConferenceProvider`) spreads the whole bootstrap payload
 (`conference`, `venues`, `travel`, `tracks`, `tags`, `rooms`, `users`, `days`, `formats`,
 `levels`, `cuisines`) and adds: `ready`, `error`, `clock` (from `useConferenceClock(days)`),
-`currentUser`, `currentUserId`, `setCurrentUserId`; follows — `followingIds`,
+`currentUser`, `currentUserId`, `setCurrentUserId`, `saveInterests(names)` (PUTs the
+signed-in attendee's interests, then replaces that user in `data.users`, so `currentUser.interests`
+is live while the rest of the roster stays as `/bootstrap` gave it); follows — `followingIds`,
 `isFollowing(id)`, `toggleFollow(id)`; seats — `reservations` (Map sessionId →
 `'confirmed'|'waitlisted'`), `reservationFor(id)`, `onAgenda(id)`, `seatCounts`,
 `seatsFor(id)`, `reserveSeat`, `releaseSeat`, `toggleSeat`, `conflict`,

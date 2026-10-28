@@ -10,6 +10,7 @@ files:
 tests:
   - tests/api/seats.test.js
   - tests/api/overlap.test.js
+  - tests/api/interests.test.js
   - tests/seats.spec.js
 related: [attendance, agenda, clock, architecture, testing]
 ---
@@ -55,6 +56,7 @@ status 'confirmed'|'waitlisted', created_at)` and the counter
 | `PUT /:id/reservations/:sessionId` body `{day,time}` | `reserveSeat` | 404 unknown user/session; **409** with the state body when `rejected` is set |
 | `DELETE /:id/reservations/:sessionId` | `releaseSeat` | no user-exists check |
 | `GET /:id/reservations/:sessionId` | `seatState` | |
+| `PUT /:id/interests` body `{interests: [topic tag name, …]}` | module-scope `topicNames`/`setInterests` | replaces the whole set and answers `toUser`; **400** unless an array of topic tag names (an unknown or tech/audience/vibe tag, a non-string), `[]` clears; duplicates collapse, order kept; 404 unknown user |
 
 The same file also owns routes from other areas — change them here, but the
 logic lives elsewhere: `GET /` and `GET /:id` (the user plus `followedSpeakers`,
@@ -62,7 +64,7 @@ logic lives elsewhere: `GET /` and `GET /:id` (the user plus `followedSpeakers`,
 `GET /:id/agenda.ics` (`lib/ical.js:agendaCalendar`); `GET /:id/today` and
 `GET /:id/schedule` (`lib/agenda.js:todayFor`/`scheduleFor`, see the agenda
 doc); attendance, check-in and rating routes (see the attendance doc); and
-`PUT`/`DELETE /:id/follows/:speakerId`, which write `speaker_follows` directly
+`PUT`/`DELETE /:id/follows/:speakerId` and `PUT /:id/interests` (row above), which write `speaker_follows` directly
 through the module-scope `follow`/`unfollow` statements.
 
 **Client.** `src/lib/api.js:reserveSeat(userId, sessionId, now)` PUTs `now` as

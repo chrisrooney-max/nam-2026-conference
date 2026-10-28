@@ -19,6 +19,7 @@ files:
   - src/components/GeneratedCover.jsx
   - src/components/HeroMedia.jsx
   - src/components/UserSwitcher.jsx
+  - src/components/InterestsDialog.jsx
   - src/components/RouteChange.jsx
   - src/pages/HomePage.jsx
   - src/pages/NotFoundPage.jsx
@@ -147,6 +148,12 @@ sticky `glass` header, `<main id="main">`, and the footer.
   instead, since that's the only attendee the store keeps reservation state
   for live — so booking or releasing a seat updates your own row without a
   reload, while everyone else's stays as `/bootstrap` had it.
+  An `Interests` button (`open-interests`, for the signed-in attendee only)
+  follows the list: it closes the menu and opens `InterestsDialog` (`interests-dialog`,
+  "Your interests"), which `UserSwitcher` renders outside the `open &&` block because it is
+  portalled outside the menu's `ref`. The dialog follows § Dialogs: one `aria-pressed` toggle per
+  `tags` entry of kind `topic` (`interest-<slug>`), seeded from `currentUser.interests` on each
+  opening; Save calls `saveInterests` and closes, Cancel/Escape/backdrop do not save.
   When `currentUser.isSpeaker`, a `Your speaker profile` link
   (`own-speaker-profile`) sits between the list and the talk links and opens
   `/speakers/<currentUser.speakerId>`, which marks itself "This is you"
