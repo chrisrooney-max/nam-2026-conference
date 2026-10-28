@@ -150,8 +150,7 @@ test.describe('Interests', () => {
       await page.keyboard.press('Escape');
       await expect(page.getByRole('listbox', { name: 'Attendees' })).toBeVisible();
 
-      // switching attendee still works
-      await page.getByRole('button', { name: /Switch attendee/ }).click();
+      // switching attendee still works, from the menu the skipped prompt opened
       await page.getByRole('option', { name: /Andy Vays/ }).click();
       await expect(page.getByRole('button', { name: /Viewing as Andy Vays/ })).toBeVisible();
     } finally {
