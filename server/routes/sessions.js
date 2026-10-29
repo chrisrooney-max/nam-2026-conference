@@ -35,7 +35,9 @@ sessionsRouter.get('/', (req, res) => {
   const args = [];
 
   if (day) { where.push('s.day = ?'); args.push(day); }
-  if (trackSlug) { where.push('t.slug = ?'); args.push(trackSlug); }
+  // trackSlug is comma-separated for a multi-select; one value is `IN (?)`
+  const trackSlugs = String(trackSlug ?? '').split(',').filter(Boolean);
+  if (trackSlugs.length) { where.push(`t.slug IN (${trackSlugs.map(() => '?').join(', ')})`); args.push(...trackSlugs); }
   if (venueId) { where.push('v.id = ?'); args.push(venueId); }
   if (roomId) { where.push('r.id = ?'); args.push(roomId); }
   if (level) { where.push('s.level = ?'); args.push(level); }
