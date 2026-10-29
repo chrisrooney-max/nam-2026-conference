@@ -200,3 +200,42 @@ describe('Every endpoint answers', () => {
     assert.deepEqual(missing, [], `untested endpoints: ${missing.join(', ')}`);
   });
 });
+
+describe('GET /sessions with several tracks', () => {
+  const slugs = async () => (await api.json('/bootstrap')).tracks.map((t) => t.slug);
+  const idsOf = (list) => list.map((s) => s.id).sort((a, b) => a - b);
+
+  test('trackSlug=a,b returns exactly the union of a and b, and nothing from another track', async () => {
+    const [a, b, c] = await slugs();
+    const onlyA = await api.json(`/sessions?trackSlug=${a}`);
+    const onlyB = await api.json(`/sessions?trackSlug=${b}`);
+    const both = await api.json(`/sessions?trackSlug=${a},${b}`);
+
+    assert.ok(onlyA.length > 0 && onlyB.length > 0, 'the first two tracks each have sessions');
+    assert.deepEqual(idsOf(both), idsOf([...onlyA, ...onlyB]));
+    assert.ok(both.every((s) => [a, b].includes(s.track.slug)));
+    assert.ok(!both.some((s) => s.track.slug === c), 'a third track stays out');
+  });
+
+  test('adding a track grows the result and removing one shrinks it back', async () => {
+    const [a, b, c] = await slugs();
+    const count = async (set) => (await api.json(`/sessions?trackSlug=${set.join(',')}`)).length;
+    const one = await count([a]);
+    const two = await count([a, b]);
+    const three = await count([a, b, c]);
+
+    assert.ok(two > one && three > two, `${one} -> ${two} -> ${three} should only grow as tracks are added`);
+    assert.equal(await count([a, c]), three - (two - one), 'removing b leaves a and c');
+  });
+
+  test('a single track, an empty value and an unknown slug behave as they did', async () => {
+    const [a] = await slugs();
+    const all = await api.json('/sessions');
+    const single = await api.json(`/sessions?trackSlug=${a}`);
+
+    assert.deepEqual(idsOf(single), idsOf(all.filter((s) => s.track.slug === a)));
+    assert.deepEqual(idsOf(await api.json(`/sessions?trackSlug=${a},`)), idsOf(single), 'a stray comma is dropped');
+    assert.deepEqual(await api.json('/sessions?trackSlug=no-such-track'), []);
+    assert.deepEqual(idsOf(await api.json(`/sessions?trackSlug=${a},no-such-track`)), idsOf(single));
+  });
+});

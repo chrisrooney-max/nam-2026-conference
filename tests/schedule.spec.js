@@ -91,6 +91,82 @@ test.describe('Schedule', () => {
     await expect(page.getByRole('heading', { name: 'No sessions match', exact: true })).toBeVisible();
   });
 
+  test('tracks can be added and removed, and the selection is in the URL', async ({ page, request }) => {
+    const days = await conferenceDays();
+    const day = days[1];
+    const { tracks } = await (await request.get(`${API}/bootstrap`)).json();
+    const [a, b] = tracks;
+    const pill = (t) => page.getByRole('button', { name: t.shortName ?? t.name, exact: true });
+    const all = page.getByRole('button', { name: 'All', exact: true });
+    const selected = () => new URL(page.url()).searchParams.get('track');
+    // result-count must equal the API's count for whatever set is selected
+    const expectCount = async (...picked) => {
+      const found = await (await request.get(`${API}/sessions?day=${day}${picked.length ? `&trackSlug=${picked.map((t) => t.slug).join(',')}` : ''}`)).json();
+      await expect(page.getByTestId('result-count')).toHaveText(new RegExp(`^${found.length} sessions?$`));
+    };
+    // the filter rail is collapsed on narrow viewports
+    const openRail = async () => {
+      const toggle = page.getByRole('button', { name: /^Filters/ });
+      if (await toggle.isVisible()) await toggle.click();
+    };
+
+    // no view in the URL: the wide default is the grid, which a track filter blocks
+    await visit(page, `/schedule?day=${day}`);
+    await openRail();
+    await expectCount();
+    await expect(all).toHaveAttribute('aria-pressed', 'true');
+    await expect(pill(a)).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.getByTestId('grid-blocked-notice')).toHaveCount(0);
+
+    // one track, as before
+    await pill(a).click();
+    expect(selected()).toBe(a.slug);
+    await expect(pill(a)).toHaveAttribute('aria-pressed', 'true');
+    await expect(all).toHaveAttribute('aria-pressed', 'false');
+    await expectCount(a);
+    await expect(page.getByTestId('grid-blocked-notice')).toBeVisible();
+
+    // adding a second track widens the list and keeps the list view
+    await pill(b).click();
+    expect(selected()).toBe(`${a.slug},${b.slug}`);
+    await expect(pill(a)).toHaveAttribute('aria-pressed', 'true');
+    await expect(pill(b)).toHaveAttribute('aria-pressed', 'true');
+    await expectCount(a, b);
+    await expect(page.getByTestId('grid-blocked-notice')).toBeVisible();
+    await expect(page.getByTestId('schedule-grid')).toHaveCount(0);
+    await shotForPR(page, 'two tracks selected');
+
+    // it survives a reload
+    await page.reload();
+    await openRail();
+    await expect(pill(a)).toHaveAttribute('aria-pressed', 'true');
+    await expect(pill(b)).toHaveAttribute('aria-pressed', 'true');
+    await expectCount(a, b);
+
+    // removing one narrows it again
+    await pill(a).click();
+    expect(selected()).toBe(b.slug);
+    await expect(pill(a)).toHaveAttribute('aria-pressed', 'false');
+    await expectCount(b);
+
+    // removing the last returns to All
+    await pill(b).click();
+    expect(selected()).toBeNull();
+    await expect(all).toHaveAttribute('aria-pressed', 'true');
+    await expectCount();
+    await expect(page.getByTestId('grid-blocked-notice')).toHaveCount(0);
+
+    // All clears a multi-selection in one go
+    await pill(a).click();
+    await pill(b).click();
+    await expectCount(a, b);
+    await all.click();
+    expect(selected()).toBeNull();
+    await expect(pill(a)).toHaveAttribute('aria-pressed', 'false');
+    await expect(pill(b)).toHaveAttribute('aria-pressed', 'false');
+    await expectCount();
+  });
+
   test('Clear filters clears the search and brings sessions back', async ({ page }) => {
     await visit(page, '/schedule?q=zzqx&view=list');
     await page.getByRole('button', { name: 'Clear filters' }).click();
