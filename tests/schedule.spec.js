@@ -97,6 +97,68 @@ test.describe('Schedule', () => {
     await expect(page).not.toHaveURL(/q=/);
     await expect(page.locator('article').first()).toBeVisible();
   });
+
+  test('track pills toggle several tracks, in the URL, and several tracks fall the grid back to the list', async ({ page, request }) => {
+    const [day] = await conferenceDays();
+    const sessions = await (await request.get(`${API}/sessions?day=${day}`)).json();
+    const [a, b] = [...new Set(sessions.map((s) => s.track.slug))];
+    const apiCount = async (...slugs) =>
+      (await (await request.get(`${API}/sessions?day=${day}&trackSlug=${slugs.join(',')}`)).json()).length;
+    const shows = async (n) => {
+      await expect(page.getByTestId('result-count')).toHaveText(new RegExp(`^${n} sessions?$`));
+    };
+    const pill = (slug) => page.getByTestId(`track-${slug}`);
+    // the rail is collapsed behind a button on phones, and closed again by a reload
+    const openRail = async () => {
+      const filters = page.getByRole('button', { name: /^Filters/ });
+      if (await filters.isVisible() && !(await pill(a).isVisible())) await filters.click();
+    };
+
+    await visit(page, `/schedule?day=${day}&view=list`, { at: await momentOn(0, MID_SESSION_TIME) });
+    await waitForResults(page);
+    await openRail();
+    await expect(page.getByTestId('track-all')).toHaveAttribute('aria-pressed', 'true');
+
+    // adding a track, then a second
+    await pill(a).click();
+    await shows(await apiCount(a));
+    await expect(page).toHaveURL(new RegExp(`track=${a}(&|$)`));
+    await pill(b).click();
+    await shows(await apiCount(a, b));
+    await expect(page).toHaveURL(new RegExp(`track=${a}(,|%2C)${b}`));
+    await expect(pill(a)).toHaveAttribute('aria-pressed', 'true');
+    await expect(pill(b)).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByTestId('track-all')).toHaveAttribute('aria-pressed', 'false');
+    await shotForPR(page, 'two tracks selected');
+
+    // the selection survives a reload
+    await page.reload();
+    await waitForResults(page);
+    await openRail();
+    await shows(await apiCount(a, b));
+    await expect(pill(a)).toHaveAttribute('aria-pressed', 'true');
+    await expect(pill(b)).toHaveAttribute('aria-pressed', 'true');
+
+    // removing one leaves the other
+    await pill(a).click();
+    await shows(await apiCount(b));
+    await expect(pill(a)).toHaveAttribute('aria-pressed', 'false');
+    await expect(page).toHaveURL(new RegExp(`track=${b}(&|$)`));
+
+    // All clears the selection
+    await pill(a).click();
+    await shows(await apiCount(a, b));
+    await page.getByTestId('track-all').click();
+    await shows(sessions.length);
+    await expect(page).not.toHaveURL(/track=/);
+    await expect(page.getByTestId('track-all')).toHaveAttribute('aria-pressed', 'true');
+
+    // two tracks still block the grid, as one does
+    await visit(page, `/schedule?day=${day}&view=grid&track=${a},${b}`, { at: await momentOn(0, MID_SESSION_TIME) });
+    await waitForResults(page);
+    await expect(page.getByTestId('view-grid')).toBeDisabled();
+    await expect(page.getByTestId('grid-blocked-notice')).toBeVisible();
+  });
 });
 
 test.describe('Schedule grid', () => {
